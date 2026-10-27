@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工程审计 · 其他类项目管理</title>
+<style>
+:root{
+  --navy:#12528e; --navy-d:#0f4478; --blue:#3f75a5; --steel:#87a9c6;
+  --bg:#ffffff; --line:#ebeef5; --head:#f5f7fa; --text:#303133; --sub:#909399;
+  --green:#67c23a; --orange:#e6a23c; --red:#f56c6c; --tabbg:#ffffff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  color:var(--text);background:var(--bg);font-size:13px;line-height:1.5}
+#shell{display:flex;height:100vh;background:#eceef1}
+#stage{flex:1 1 auto;min-width:0;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+/* 应用外壳：页签条 + 卡片 */
+.apptabs{display:flex;align-items:flex-end;gap:6px;padding:0 10px;background:#ffffff;border:1px solid var(--line);border-radius:6px 6px 0 0;height:38px}
+.apptabs .home{font-size:12.5px;color:#606266;line-height:38px;padding:0 10px}
+.apptabs .tab{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #a9c7ea;border-bottom:none;
+  border-radius:4px 4px 0 0;padding:7px 14px;font-size:12.5px;color:var(--text)}
+.apptabs .tab .dot{width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.apptabs .tab .x{color:#909399;cursor:pointer}
+.card{background:#fff;border:1px solid var(--line);border-radius:6px;margin-bottom:14px}
+.card.attach-top{border-radius:0 6px 6px 6px}
+
+/* 列表工具条 */
+.listbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--tabbg);border-bottom:1px solid #e4e7ed;border-radius:6px 6px 0 0;padding:10px 12px}
+.logo{width:34px;height:34px;border-radius:4px;background:var(--navy);display:flex;align-items:center;justify-content:center;flex:0 0 34px}
+.ptitle{font-size:15px;font-weight:600;color:var(--text);margin-right:6px;white-space:nowrap}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pills button{height:32px;padding:0 18px;border-radius:4px;border:1px solid #e4e7ed;background:#fff;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit}
+.pills button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.pills button:hover{border-color:var(--navy);color:var(--navy)}
+.pills button.on:hover{color:#fff}
+.spacer{flex:1 1 auto}
+.ctl{height:38px;border:1px solid #e4e7ed;border-radius:3px;padding:0 10px;font-size:12.5px;font-family:inherit;outline:none;background:#fff;color:var(--text);min-width:0}
+.ctl:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(47,127,208,.08)}
+select.ctl{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2386909c'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+.ctl[readonly],.ctl.ro{background:#f5f6f8;color:#909399}
+.advchk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#606266;cursor:pointer;white-space:nowrap}
+.advchk input{accent-color:var(--blue)}
+.btn{height:36px;padding:0 16px;border-radius:3px;border:1px solid #e4e7ed;background:#fff;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--navy);color:var(--navy)}
+.btn.navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.navy:hover{background:var(--navy-d);color:#fff}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.blue:hover{background:#35638d;color:#fff}
+.btn.steel{background:var(--steel);border-color:var(--steel);color:#fff}
+.btn.steel:hover{background:#7c9eba;color:#fff}
+.btn.sm{height:30px;padding:0 12px;font-size:12px}
+.btn.lite{background:#fff;border-color:#c8d8ec;color:var(--navy)}
+.lnk{border:none;background:none;color:#3f75a5;font-size:12.5px;cursor:pointer;padding:0 7px;font-family:inherit}
+.lnk:hover{text-decoration:underline}
+.lnk.mute{color:#909399}
+.lnk.dark{color:var(--navy)}
+.advbox{display:none;padding:12px 12px 4px;border-bottom:1px solid var(--line);background:#f5f7fa}
+.advbox.on{display:block}
+.advgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 18px}
+.frow{display:flex;align-items:center;gap:10px;min-width:0}
+.frow>label{flex:0 0 88px;font-size:12.5px;color:var(--text);white-space:nowrap}
+.frow>label.req::before{content:"*";color:var(--red);margin-right:2px}
+#dynFields.wlab .frow>label{flex:0 0 116px}
+.fctl{flex:1 1 auto;min-width:0}
+.fctl .ctl,.arow .ctl{width:100%}
+
+/* 表格 */
+.tablewrap{overflow-x:auto}
+table.lt{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1150px}
+table.lt th{background:var(--head);color:#606266;font-weight:400;text-align:left;padding:9px 12px;border:1px solid var(--line);white-space:nowrap}
+table.lt td{padding:9px 12px;border:1px solid var(--line);background:#fff;white-space:nowrap}
+table.lt tbody tr:hover td{background:#f5f7fa}
+table.lt tbody tr[data-rowid]{cursor:pointer}
+table.lt tbody tr.sel td,table.lt tbody tr.sel:hover td{background:#c2d6e9}
+table.lt td.ck,table.lt th.ck{width:44px;text-align:center;padding:9px 0}
+table.lt input[type=checkbox]{accent-color:var(--blue)}
+.st{font-size:12.5px}
+.st.draft{color:#909399}
+.st.approving{color:var(--orange)}
+.st.closed{color:var(--blue)}
+.st.reject{color:var(--red)}
+.pager{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 12px;font-size:12.5px;color:#606266;flex-wrap:wrap}
+.pgbtn{min-width:30px;height:30px;border:1px solid #ebeef5;background:#fff;border-radius:3px;font-size:12.5px;color:#606266;cursor:pointer;padding:0 8px}
+.pgbtn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.pgbtn:hover{border-color:var(--navy);color:var(--navy)}
+.pgbtn.on:hover{color:#fff}
+
+/* 详情卡片 */
+.tabs2{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid #ebeef5;flex-wrap:wrap}
+.t2{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border:1px solid transparent;background:none;
+  font-size:13.5px;color:#606266;cursor:pointer;font-family:inherit;border-radius:4px}
+.t2:hover{color:var(--navy)}
+.t2.on{background:var(--navy);color:#fff}
+.t2.on:hover{color:#fff}
+.t2 svg{opacity:.9}
+.pane{display:none;padding:4px 16px 22px}
+.pane.on{display:block}
+.sect{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text);
+  padding:14px 0 10px;border-bottom:1px solid #ebeef5;margin-bottom:14px;cursor:pointer}
+.sect .chev{color:#606266;font-size:11px;width:12px;display:inline-block;transition:transform .15s}
+.sect.closed .chev{transform:rotate(-90deg)}
+.sectbox{border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin-bottom:6px}
+.sectbox.hide{display:none}
+.grid3{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 20px}
+.g1,.gs2{grid-column:span 2}.g2,.gs4{grid-column:span 4}.gs3{grid-column:span 3}.g3,.gs6{grid-column:span 6}
+.pickwrap{display:flex;align-items:center;gap:8px}
+.pickbox{flex:1;min-height:34px;border:1px solid #e4e7ed;border-radius:3px;background:#fff;display:flex;align-items:center;gap:6px;padding:3px 8px;flex-wrap:wrap}
+.pickbox.ro{background:#f5f6f8}
+.tagchip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text)}
+.tagchip i{width:20px;height:20px;border-radius:3px;background:#e8f0fb;color:var(--navy);font-size:11px;font-style:normal;display:flex;align-items:center;justify-content:center}
+.tagchip .rm{color:#a9b0bb;cursor:pointer}
+.iconbtn{width:32px;height:32px;border:1px solid #e4e7ed;border-radius:3px;background:#fff;color:#606266;cursor:pointer;font-size:13px}
+.iconbtn:hover{border-color:var(--navy);color:var(--navy)}
+.hint{font-size:11.5px;color:var(--sub)}
+.tip{font-size:11.5px;color:var(--orange)}
+.unitwrap{display:block;position:relative}
+.unitwrap .unit{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--sub);pointer-events:none}
+textarea.ctl{height:78px;padding:8px 10px;resize:vertical;line-height:1.6}
+.cnt{text-align:right;font-size:11px;color:#c0c4cc;margin-top:-16px;position:relative;padding-right:4px}
+
+/* 附件区：相关附件 */
+.upbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.upbar .ulb{font-size:13px;color:#606266}
+.upbar .cslb{font-size:12.5px;color:#909399;margin-left:6px}
+.upbar .spacer{flex:1 1 auto}
+.updd{position:relative;display:inline-flex;align-items:center}
+.updd .cv2{font-size:10px;margin-left:5px;opacity:.92}
+.upmenu{position:absolute;left:0;top:calc(100% + 6px);min-width:176px;max-height:340px;overflow:auto;
+  background:#fff;border:1px solid #e4e7ed;border-radius:2px;box-shadow:0 4px 14px rgba(0,0,0,.14);
+  padding:4px 0;z-index:70;display:none}
+.upmenu.on{display:block}
+.upmenu button{display:block;width:100%;padding:9px 18px;border:none;background:none;font-family:inherit;
+  font-size:12.5px;color:#303133;cursor:pointer;text-align:center;white-space:nowrap}
+.upmenu button:hover{background:#f5f7fa;color:#11538e}
+table.ft{width:100%;border-collapse:collapse;font-size:12.5px}
+table.ft th{background:var(--head);color:#606266;font-weight:400;text-align:left;padding:9px 12px;border:1px solid var(--line);white-space:nowrap}
+table.ft td{padding:8px 12px;border:1px solid var(--line);background:#fff;white-space:nowrap;color:#606266}
+table.ft tbody tr:hover td{background:#f5f7fa}
+table.ft td.ck,table.ft th.ck{width:44px;text-align:center;padding:8px 0}
+table.ft input[type=checkbox]{accent-color:var(--blue)}
+table.ft td.op{text-align:center}
+table.ft td.op .lnk{padding:0}
+table.ft td.op .lnk+.lnk{margin-left:12px}
+table.ft tr.fempty td{text-align:center;padding:22px 12px;color:var(--sub)}
+table.ft tr.fempty:hover td{background:#fff}
+select.bare{height:28px;width:100%;border:1px solid transparent;border-radius:2px;background-color:transparent;color:var(--navy);font-size:12.5px;font-family:inherit;padding:0 20px 0 6px;
+  appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2386909c'/></svg>");
+  background-repeat:no-repeat;background-position:right 6px center}
+select.bare:hover{border-color:var(--bd)}
+.prog{display:inline-block;width:calc(100% - 30px);height:8px;border-radius:4px;background:#eef1f5;overflow:hidden;vertical-align:middle;margin-right:10px}
+.prog i{display:block;height:100%;background:var(--green);border-radius:4px;transition:width .2s linear}
+.pdone{color:var(--green);font-size:13px;font-weight:700;vertical-align:middle}
+.upnote{font-size:12.5px;color:#606266;margin:12px 0 14px}
+
+/* 明细表 */
+.toolbar{display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-bottom:none;border-radius:4px 4px 0 0;background:#fafafa;padding:0 4px;flex-wrap:wrap}
+.toolbar .tbtn{border:none;background:none;height:34px;padding:0 10px;font-size:12.5px;color:#606266;cursor:pointer;font-family:inherit}
+.toolbar .tbtn:hover{color:var(--navy);background:#f5f7fa}
+table.lt.editable input,table.lt.editable select{width:100%;border:none;height:32px;padding:0 10px;font-size:12.5px;font-family:inherit;outline:none;background:transparent}
+table.lt.editable td{padding:0}
+table.lt.editable td.calc{background:#f7f8fa}
+table.lt.editable td.calc input{color:#909399}
+.sums{display:flex;gap:60px;flex-wrap:wrap;margin:12px 2px 4px}
+.sums .it{font-size:12.5px;color:#606266}
+.sums .it b{display:block;font-size:15px;margin-top:2px;color:var(--navy)}
+.sums .it b.red{color:#c81e1e}
+
+/* 变更 */
+.arow{display:grid;grid-template-columns:1fr 22px 1fr;gap:12px;align-items:center;margin-bottom:12px}
+.arow .ap{font-size:11.5px;color:var(--sub);margin-bottom:5px}
+.arow .bf{color:#909399;text-decoration:line-through}
+.tl{border-left:2px solid #ebeef5;margin:6px 0 0 4px;padding-left:14px}
+.tl .ti{position:relative;padding-bottom:14px}
+.tl .ti::before{content:"";position:absolute;left:-20px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.tl .ti .th{font-size:12.5px;font-weight:600}
+.tl .ti .td{font-size:11.5px;color:var(--sub);margin-top:2px}
+.tl .ti .tc{font-size:12.5px;color:#606266;margin-top:5px;background:#fafafa;border:1px solid var(--line);border-radius:4px;padding:7px 10px}
+
+/* 变更附件 chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip2{background:#f5f7fa;border:1px solid var(--line);border-radius:3px;padding:2px 10px;font-size:12.5px}
+.pill{display:inline-block;background:#ffffff;border:1px solid #d6e2f2;border-radius:3px;padding:0 6px;font-size:11.5px;color:var(--navy);margin-left:6px}
+.notice{background:#f2f7ff;border:1px solid #cfe0f7;border-radius:4px;padding:10px 12px;font-size:12.5px;color:#303133;margin-bottom:12px}
+
+/* 弹窗 / 提示 */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:80}
+.mask.on{display:flex}
+.modal{width:660px;max-width:94vw;max-height:86vh;overflow:auto;background:#fff;border-radius:6px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal .mh{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line);font-size:14px;font-weight:600}
+.modal .mb{padding:16px 18px;font-size:12.5px}
+.modal .mf{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+/* 提示弹窗（提交类确认）：图标提示 + 备注 + 审批人提示 */
+.modal .msub{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.95;color:#303133;margin:2px 0 20px}
+.modal .msub .wico{flex:0 0 20px;width:20px;height:20px;border-radius:50%;border:1.5px solid #e6a23c;color:#e6a23c;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1;margin-top:5px}
+.modal .mtip{margin-top:16px;font-size:13px;color:#67c23a}
+.modal .frow{align-items:flex-start;gap:12px}
+.modal .frow>label{flex:0 0 64px;line-height:38px;color:#303133;font-size:13px}
+.modal .frow .fctl textarea.ctl{width:100%;height:104px;padding:8px 12px;line-height:1.7}
+.modal .x{border:none;background:none;cursor:pointer;color:#909399;font-size:16px}
+.flowline{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:4px;margin-bottom:8px;font-size:12.5px}
+.flowline.cur{border-color:var(--navy);background:#f5f7fa}
+.flowline .no{width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 20px}
+.flowline .nm{font-weight:600}
+.flowline .mo{color:var(--sub);margin-left:auto}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px 10px;font-size:12.5px}
+.kv .k{color:#606266}
+.toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-16px);background:#303133;color:#fff;font-size:12.5px;padding:9px 16px;border-radius:4px;opacity:0;transition:.2s;z-index:120;pointer-events:none;max-width:70vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.screen{display:none}
+.screen.on{display:block}
+
+.mobtoggle{display:none}
+@media (max-width:1100px){
+  #shell{display:block;height:auto}
+  #stage{width:auto;height:auto;max-height:none;flex:none;overflow:visible}
+  .appbody{display:block;height:auto;overflow:visible}
+  .asidemenu{width:auto;flex:none;padding:4px 0}
+  .content{overflow:visible;height:auto}
+  .topbar{overflow-x:auto}
+  .topbar .brand{flex:0 0 auto;width:auto;padding-right:12px}
+  .topbar .spacer{display:none}
+  .mobtoggle{display:inline-flex}
+  .pills{overflow-x:auto;max-width:100%}
+  .grid3{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .grid3>.frow{grid-column:span 6}
+  .upbar{gap:8px}
+  .advgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* ================= V3：按《工程结算项目管理》实际页面取色对齐（Element UI 组件风格） ================= */
+:root{--navy:#11538e;--navy-d:#0d4374;--blue:#3f75a5;--steel:#87a9c6;--bd:#e4e7ed;
+  --line:#ebeef5;--head:#f5f7fa;--text:#303133;--sub:#909399;--tabbg:#ffffff;
+  --page:#eceef1;--cardbd:#e7e8f1;--menu2:#174266;--menuhl:#5a8ab4;--topon:#e6f2f9}
+
+/* 顶部应用分页签：当前页签深蓝填充 */
+.apptabs{flex:0 0 34px;height:34px;align-items:center;padding:0 12px;background:#fff;border:none;border-radius:0;gap:8px}
+.apptabs .home{font-size:13px;color:#606266;line-height:26px;height:28px;padding:0 14px;border:1px solid #d8dce4;border-radius:2px;background:#fff}
+.apptabs .tab{background:var(--navy);border:1px solid var(--navy);border-radius:2px;height:28px;padding:0 14px;color:#fff;font-size:13px}
+.apptabs .tab .dot{background:#fff}
+.apptabs .tab .x{color:rgba(255,255,255,.85)}
+.card{background:#fff;border:1px solid var(--cardbd);border-radius:2px;margin-bottom:12px}
+.card.attach-top{border-radius:0 0 2px 2px}
+
+/* 列表工具条：白底 + 圆形 logo + 分段式状态页签 */
+.listbar{background:#fff;border-bottom:1px solid var(--bd);border-radius:0;padding:8px 12px;gap:6px}
+.logo{border-radius:50%}
+.ptitle{font-size:14px;margin-right:0}
+.pills{gap:0;flex-wrap:nowrap}
+.pills button{height:36px;padding:0 14px;border:1px solid var(--bd);border-left:none;border-radius:0;background:#fff;color:#606266;font-size:13px}
+.pills button:first-child{border-left:1px solid var(--bd);border-radius:2px 0 0 2px}
+.pills button:last-child{border-radius:0 2px 2px 0}
+.pills button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.pills button.on:hover{color:#fff}
+.ctl{height:38px;border:1px solid var(--bd);border-radius:2px;font-size:13px}
+.btn{height:36px;border:1px solid var(--bd);border-radius:2px;font-size:13px}
+.btn.steel{background:var(--steel);border-color:var(--steel);padding:0 12px}
+.btn.steel:hover{background:#7c9eba}
+.btn.blue{background:var(--blue);border-color:var(--blue)}
+.btn.blue:hover{background:#35638d}
+.btn.navy{background:var(--navy);border-color:var(--navy)}
+.advchk{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--navy);
+  background:none;border:none;padding:0 2px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.advchk .cv{font-size:12px;line-height:1;transition:transform .15s}
+.advchk.on .cv{transform:rotate(180deg)}
+.advbox{background:#f5f7fa;border-bottom:1px solid var(--bd)}
+
+/* 表格：表头 #f5f7fa + 全网格 #ebeef5 + 约 35px 行高 */
+table.lt th{background:var(--head);color:#606266;font-size:13px;font-weight:500;padding:11px 12px;border:1px solid var(--line)}
+table.lt td{font-size:13px;padding:8px 12px;border:1px solid var(--line)}
+table.lt tbody tr:hover td{background:#f5f7fa}
+.st.draft{color:#909399}
+.st.approving{color:var(--green)}
+.st.closed{color:#909399}
+.st.reject{color:var(--red)}
+.pgbtn{min-width:32px;height:32px;border:1px solid var(--bd);border-radius:2px;background:#f5f7fa;color:#606266;font-size:13px}
+.pgbtn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.pager{color:#606266;font-size:13px}
+
+/* 详情卡片 */
+.tabs2{border-bottom:1px solid var(--line);padding:8px 12px}
+.t2{height:38px;font-size:13px;color:#606266;border-radius:2px}
+.t2.on{background:var(--navy);color:#fff}
+.sect{color:var(--navy);border-bottom:1px solid var(--line)}
+.sect .chev{color:var(--navy);font-size:12px}
+.sect.closed .chev{transform:rotate(180deg)}
+.sectbox{border:1px solid var(--bd);border-radius:2px}
+.frow>label{color:#606266;font-size:13px}
+.pickbox{border:1px solid var(--bd);border-radius:2px}
+.iconbtn{border:1px solid var(--bd);border-radius:2px}
+table.ft th{font-size:12.5px}
+.upbar .ulb{margin-right:2px}
+.modal.wide{width:820px}
+.notice{border-radius:2px}
+.lnk{color:var(--blue)}
+/* ================= V4：页面框架（顶栏 + 左侧菜单）与表单规范 =================
+   取色与尺寸按参考界面实测：顶栏 56px #11538E；左菜单 208px，一级 50px，
+   子菜单块 #174266、当前子项 #5A8AB4；内容区底色 #ECEEF1、卡片描边 #E7E8F1；
+   表单：标签右对齐、紧贴控件（间距 12px），控件浅灰填充 #F5F7FA、高 38px、圆角 2px */
+.app{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;background:var(--page)}
+
+/* 顶栏 */
+.topbar{flex:0 0 56px;height:56px;background:var(--navy);display:flex;align-items:center;color:#fff}
+.topbar .brand{flex:0 0 208px;width:208px;height:100%;display:flex;align-items:center;gap:9px;
+  padding-left:16px;border-right:1px solid rgba(0,0,0,.16)}
+.topbar .brand .nm{font-size:15px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.topbar .hamb{width:42px;height:100%;border:none;background:none;color:#fff;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;font-family:inherit}
+.topbar .hamb:hover{background:rgba(255,255,255,.12)}
+.topmenu{display:flex;align-items:stretch;height:56px;overflow:hidden}
+.topmenu a{display:inline-flex;align-items:center;padding:0 17px;font-size:14.5px;color:#fff;
+  cursor:pointer;white-space:nowrap;text-decoration:none}
+.topmenu a:hover{background:rgba(255,255,255,.12)}
+.topmenu a.on{background:var(--topon);color:var(--navy);font-weight:700}
+.topbar .spacer{flex:1 1 auto}
+.topbar .tuser{display:flex;align-items:center;gap:10px;padding:0 14px;font-size:13.5px;white-space:nowrap}
+.topbar .tbadge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;
+  padding:0 4px;border-radius:3px;background:var(--topon);color:var(--navy);font-size:11px;font-weight:700}
+.topbar .ava{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.55);
+  background:radial-gradient(circle at 36% 30%,#ffffff,#c9d4e2)}
+
+/* 主体：左侧菜单 + 内容区 */
+.appbody{flex:1 1 auto;min-height:0;display:flex}
+.asidemenu{flex:0 0 208px;width:208px;background:var(--navy);overflow-y:auto;padding-bottom:24px}
+.asidemenu .mi{display:flex;align-items:center;gap:10px;height:50px;padding:0 14px;color:#fff;
+  font-size:14px;cursor:pointer;user-select:none}
+.asidemenu .mi:hover{background:rgba(255,255,255,.09)}
+.asidemenu .mi .ic{flex:0 0 16px;width:16px;height:16px;opacity:.95}
+.asidemenu .mi .cv{margin-left:auto;font-size:9px;opacity:.75}
+.asidemenu .sub{background:var(--menu2)}
+.asidemenu .sub .si{display:flex;align-items:center;height:50px;padding:0 14px 0 34px;
+  font-size:14px;color:rgba(255,255,255,.92);cursor:pointer;user-select:none}
+.asidemenu .sub .si:hover{background:rgba(255,255,255,.09)}
+.asidemenu .sub .si.on{background:var(--menuhl);color:#fff}
+.content{flex:1 1 auto;min-width:0;overflow-y:auto;background:var(--page);display:flex;flex-direction:column}
+.content>.screen{padding:10px 14px 24px}
+
+/* 基本信息表单：标签右对齐、紧贴控件；控件浅灰填充无描边感 */
+.frow>label{flex:0 0 88px;text-align:right;font-size:13px;color:#606266}
+.grid3{gap:12px 32px}
+#dynFields .frow{gap:12px;align-items:flex-start;min-height:58px}
+#dynFields .frow>label{flex:0 0 96px;padding-top:10px;line-height:18px}
+#dynFields.wlab .frow>label{flex:0 0 124px}
+#dynFields .frow>.fctl{flex:1 1 auto;min-width:0}
+      #dynFields .frow>.fctl>.tip,#dynFields .frow>.fctl>.hint{margin-top:4px;font-size:11.5px;line-height:16px;color:#909399;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pane .fctl .ctl,.pane .fctl .pickbox{background:#fff;border-color:#e4e7ed;border-radius:2px}
+.pane .fctl .ctl,.pane .fctl .pickbox{height:38px;font-size:13px}
+.pane .fctl .ctl{padding:0 12px}
+.pane .fctl textarea.ctl{height:76px;padding:8px 12px}
+.pane .fctl .pickbox{min-height:38px;height:auto}
+.pane .fctl .ctl.ro,.pane .fctl .ctl[readonly],.pane .fctl .ctl[disabled],.pane .fctl .pickbox.ro{background:#f5f7fa;color:#606266}
+      .pane .fctl .ctl:focus{border-color:#a9c7ea;background:#fff}
+.pane .fctl .pickbox .ctl{height:auto}
+.sect{font-size:15px;color:var(--navy);padding:14px 0 10px}
+.sectbox{border:1px solid var(--cardbd);border-radius:2px;padding:16px 20px}
+/* 附件分组：每个分组 = 文本 + 该分组的附件（成本优化等类型） */
+.aggroup{padding:2px 0 12px}
+.aggroup+.aggroup{padding-top:0}
+.aghead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.aghead .aglb{font-size:13px;color:#303133}
+.agtext textarea.ctl{width:100%;height:70px;padding:8px 12px;font-size:13px;border-radius:2px}
+.agtext .hint{text-align:right}
+/* ===== 成效信息 / 内控核验 / 分阶段录入 ===== */
+.subhd{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#11538E;margin:0 0 10px;padding-left:9px;border-left:3px solid #11538E;line-height:1.25}
+.st.running{color:#2F7FD0}
+.st.pending{color:#E6A23C}
+.st.done{color:#67C23A}
+table.lt.bids{min-width:0;table-layout:fixed}
+.addrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.btn.lite{border:1px dashed #B7CBE0;color:#11538E;background:#F7FAFD}
+table.lt.editable textarea{width:100%;border:none;height:52px;padding:6px 10px;font-size:12.5px;font-family:inherit;outline:none;background:transparent;resize:vertical;color:#303133}
+table.lt.editable textarea.ro{background:#F5F7FA;color:#909399}
+table.lt.editable td.rotext{padding:0 10px;color:#303133;font-size:12.5px}
+.agtext textarea.ctl.ro{background:#F5F7FA;color:#909399}
+.sect .spacer{flex:1 1 auto}
+table.lt.chgtb{min-width:0}
+#chgRecBody td{padding:5px 8px;height:46px}
+#chgRecBody input,#chgRecBody select{width:100%;height:34px;border:1px solid #E4E7ED;border-radius:2px;padding:0 10px;font-size:12.5px;font-family:inherit;outline:none;background:#fff;color:#303133}
+#chgRecBody input.ro{background:#F5F7FA;color:#606266}
+#chgRecBody .rotext{font-size:12.5px;color:#303133}
+#chgRecBody td.op{text-align:center}
+/* 变更信息：单行可点击，选中行淡蓝高亮（与列表选中色一致） */
+#chgInfoBody tr[data-ci]{cursor:pointer}
+#chgInfoBody tr[data-ci]:hover td{background:#F5F9FD}
+#chgInfoBody tr.selrow td,#chgInfoBody tr.selrow:hover td{background:#C2D6E9}
+/* 变更记录：项目组员为多人选择控件（点选人名，无需手动输入分隔符） */
+#chgRecBody .pickwrap{gap:6px}
+#chgRecBody .pickbox{min-height:34px;height:auto;max-height:104px;overflow:auto;background:#fff;border-color:#E4E7ED;border-radius:2px}
+#chgRecBody .pickwrap .iconbtn{flex:0 0 34px;width:34px;height:34px;font-size:13px}
+/* 内控核验表单：与基本信息同规格的标签/控件排布（长标签自动加宽） */
+#innerZone .frow{gap:12px;align-items:flex-start;min-height:58px}
+#innerZone .frow>label{flex:0 0 96px;padding-top:10px;line-height:18px;text-align:right;font-size:13px;color:#606266;white-space:nowrap}
+#innerZone.wlab .frow>label{flex:0 0 160px}
+#innerZone .frow>.fctl{flex:1 1 auto;min-width:0}
+
+/* 项目信息：紧凑行距 + 统一 40px 表格行高 */
+.grid3{gap:10px 32px}
+#dynFields .frow{min-height:40px;align-items:center;gap:10px}
+#dynFields .frow>label{padding-top:0;line-height:20px}
+#dynFields .frow>.fctl>.tip,#dynFields .frow>.fctl>.hint{margin-top:2px;line-height:15px}
+#innerZone .frow{min-height:44px;gap:10px}
+#innerZone .frow>label{padding-top:9px}
+table.lt tr,table.ft tr,table.bids tr{height:40px}
+table.lt th,table.ft th,table.bids th{height:40px;padding-top:0;padding-bottom:0}
+table.lt td,table.ft td,table.bids td{vertical-align:middle}
+#dynFields .frow>.fctl{position:relative}
+#dynFields .frow>.fctl textarea.ctl{padding-bottom:22px;resize:none}
+.agtext{position:relative}
+.agtext textarea.ctl{padding-bottom:22px;resize:none}
+.taCount{position:absolute;right:16px;bottom:7px;font-size:11.5px;line-height:1;color:#909399;pointer-events:none;user-select:none;background:#fff;padding:0 3px;border-radius:2px}
+.pane textarea.ctl.ro+.taCount,.agtext textarea.ctl.ro+.taCount{background:#f5f7fa}
+.pickbox.ro{cursor:default}
+/* 内控核验明细：按风险事项分组，金额分为风险敞口金额 / 控制金额两行 */
+table.lt.riskdetail{min-width:0;table-layout:fixed}
+table.lt.riskdetail col.c-ck{width:44px}
+table.lt.riskdetail col.c-seq{width:48px}
+table.lt.riskdetail col.c-person{width:150px}
+table.lt.riskdetail col.c-amount-l{width:160px}
+table.lt.riskdetail col.c-amount-v{width:220px}
+table.lt.riskdetail tbody tr:hover td{background:#fff}
+table.lt.riskdetail td.riskmerged{vertical-align:middle;white-space:normal;padding:8px 10px}
+table.lt.riskdetail td.riskitemcell{white-space:normal;padding:8px 10px}
+table.lt.riskdetail td.riskitemcell textarea{height:64px;padding:6px 10px;resize:none;display:block}
+table.lt.riskdetail td.riskamtlabel{background:#FAFBFC;color:#606266;padding:0 10px}
+table.lt.riskdetail td.riskamtvalue{padding:0}
+table.lt.riskdetail td.riskamtvalue input{text-align:left}
+</style>
+</head>
+<body><div id="shell">
+<div id="stage">
+
+  <!-- ==================== 应用框架：顶栏 + 左侧菜单 ==================== -->
+  <div class="app" id="appFrame">
+    <div class="topbar">
+      <div class="brand">
+        <svg width="36" height="27" viewBox="0 0 36 27">
+          <ellipse cx="18" cy="13.5" rx="17" ry="12.5" fill="#ffffff"/>
+          <ellipse cx="18" cy="13.5" rx="17" ry="12.5" fill="none" stroke="#43a047" stroke-width="2"/>
+          <text x="18" y="17.6" text-anchor="middle" font-size="11" font-weight="700" fill="#e2231a" font-family="'Microsoft YaHei',sans-serif">伊利</text>
+        </svg>
+        <span class="nm">审计管理</span>
+      </div>
+      <button class="hamb" title="收起/展开菜单">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13"/></svg>
+      </button>
+      <nav class="topmenu">
+        <a class="on">审计管理</a><a>在线作业</a><a>数据挖掘</a><a>数据监控</a><a>协同审计</a>
+        <a>决策分析</a><a>工程审计</a><a>应用台</a><a>系统管理</a><a>webOffice</a>
+      </nav>
+      <span class="spacer"></span>
+      <div class="tuser">
+        <span class="tbadge">A文</span>
+        <span>宁子钧全部</span>
+        <span class="ava"></span>
+      </div>
+    </div>
+    <div class="appbody">
+      <aside class="asidemenu">
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l6-5 6 5v7H2z"/></svg>首页</div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2.5h4.5v4.5H2zM9.5 2.5H14v4.5H9.5zM2 9.5h4.5V14H2zM9.5 9.5H14V14H9.5z"/></svg>项目整体进度</div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12v11H2z"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg>审计计划管理<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.6"/><path d="M4.1 4.1l7.8 7.8"/></svg>内部审计<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.7-4.4 7-4.4S15 8 15 8s-2.7 4.4-7 4.4S1 8 1 8z"/><circle cx="8" cy="8" r="1.8"/></svg>监察<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.6 14.4 5 8 8.4 1.6 5z"/><path d="M2.2 8.4 8 11.6l5.8-3.2"/></svg>工程审计<span class="cv">&#9652;</span></div>
+        <div class="sub">
+          <div class="si">工程结算项目管理</div>
+          <div class="si on">其他类项目管理</div>
+          <div class="si">工程项目总览</div>
+          <div class="si">工程审计报告</div>
+        </div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 1.6h5.6L12.8 5v9.4H3.6z"/><path d="M9.2 1.6V5h3.6"/></svg>问题处理跟踪<span class="cv">&#9652;</span></div>
+        <div class="sub">
+          <div class="si">跟踪中</div>
+          <div class="si">已完结</div>
+        </div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 4.6h8.8l-2-2M14.4 11.4H5.6l2 2"/></svg>移送管理<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14V6.6M6 14V3M10 14V8.4M14 14V5"/></svg>工程审计成效管理<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.6 6.4 8l3 2 4.4-5.4"/><path d="M10.6 4.6h3.6v3.6"/></svg>审计成效<span class="cv">&#9662;</span></div>
+        <div class="mi"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2.6h5.4v10.8H2zM8.6 2.6H14v10.8H8.6z"/></svg>审计标准中心<span class="cv">&#9662;</span></div>
+      </aside>
+      <div class="content">
+
+        <div class="apptabs">
+          <span class="home">首页</span>
+          <span class="tab"><span class="dot"></span>其他类项目管理<span class="x">&times;</span></span>
+        </div>
+
+        <!-- ==================== 视图1：项目管理 ==================== -->
+        <div class="screen on" id="v-main">
+
+    <!-- 列表卡片 -->
+    <div class="card attach-top">
+      <div class="listbar" id="listBar">
+        <span class="logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+            <path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </span>
+        <span class="ptitle">项目列表</span>
+        <div class="pills" id="tabs">
+          <button class="on" data-tab="">全部</button>
+          <button data-tab="draft">草稿</button>
+          <button data-tab="running">正在执行</button>
+          <button data-tab="closed">已关闭</button>
+        </div>
+        <span class="spacer"></span>
+        <select class="ctl" id="fField" style="width:104px">
+          <option value="">精准搜索</option>
+          <option value="status">状态</option>
+          <option value="code">项目编号</option>
+          <option value="type">项目类型</option>
+          <option value="name">项目名称</option>
+          <option value="owner">项目负责人</option>
+          <option value="members">项目组员</option>
+        </select>
+        <input class="ctl" id="fFieldKw" placeholder="精准搜索" style="width:138px">
+        <input class="ctl" id="fKw" placeholder="模糊搜索" style="width:138px">
+        <button class="btn navy" id="btnNew">＋ 新增</button>
+      </div>
+
+      <div class="tablewrap" id="listWrap">
+        <table class="lt">
+          <thead>
+            <tr>
+              <th class="ck"><input type="checkbox" id="ckAllList"></th>
+              <th>序号</th>
+              <th>状态</th>
+              <th>项目编号</th>
+              <th>项目类型</th>
+              <th>项目名称</th>
+              <th>项目分类</th>
+              <th>所属年月</th>
+              <th>项目负责人</th>
+              <th>项目组员</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pager" id="pager">
+        <span id="pageInfo">共 0 条</span>
+        <select class="ctl" style="width:96px;height:30px"><option>10条/页</option><option>20条/页</option><option>50条/页</option></select>
+        <button class="pgbtn">‹</button>
+        <button class="pgbtn on">1</button>
+        <button class="pgbtn">2</button>
+        <button class="pgbtn">3</button>
+        <button class="pgbtn">›</button>
+        <span>前往</span><input class="ctl" value="1" style="width:56px;height:30px;text-align:center"><span>页</span>
+      </div>
+    </div>
+
+    <!-- 详情卡片 -->
+    <div class="card">
+      <div class="tabs2" id="detailTabs">
+        <button class="t2 on" data-pane="info">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          项目信息
+        </button>
+        <button class="t2" data-pane="change">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11l-3-3"/><path d="M20 17H9l3 3"/></svg>
+          项目变更
+        </button>
+        <span class="spacer"></span>
+        <button class="btn lite sm" id="btnEdit" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="m14 6 4 4"/></svg>
+          <span>编辑</span>
+        </button>
+        <button class="btn navy sm" id="btnSave">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z"/><path d="M8 4v6h7"/></svg>
+          <span id="saveLb">保存</span>
+        </button>
+        <button class="btn blue sm" id="btnSubmit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V7l-5-3H6v16h9"/><path d="m15 18 5-3-5-3z"/></svg>
+          <span id="submitLb">提交</span>
+        </button>
+      </div>
+
+      <!-- 项目信息 -->
+      <div class="pane on" id="pane-info">
+        <div class="sect" data-sec="1"><span class="chev">⌃</span>基本信息<span class="hint" id="formTypeHint"></span></div>
+        <div class="sectbox" id="box-info">
+          <div class="grid3" id="dynFields"></div>
+        </div>
+        <div id="effWrap">
+        <div class="sect" data-sec="2"><span class="chev">⌃</span><span id="effTitle">业务成效审批</span></div>
+        <div class="sectbox" id="box-effect" style="padding:14px 16px">
+          <div class="subhd">附件</div>
+          <div id="attachFlat">
+          <div class="upbar">
+            <span class="ulb">相关附件</span>
+            <span class="updd">
+              <button class="btn navy sm" id="btnUpload"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/></svg>上传附件<span class="cv2">⌄</span></button>
+              <div class="upmenu" id="upMenu"></div>
+            </span>
+          </div>
+          <div class="tablewrap">
+            <table class="ft" id="attachTable">
+              <thead>
+                <tr>
+                  <th>文件名</th>
+                  <th style="width:150px">附件分类</th>
+                  <th style="width:110px">上传人</th>
+                  <th style="width:110px">文件大小</th>
+                  <th style="width:170px">上传时间</th>
+                  <th style="width:90px;text-align:center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="fileBody"></tbody>
+            </table>
+          </div>
+          </div>
+          <div id="attachGroups" style="display:none"></div>
+          <div class="subhd" id="subhdDetail" style="margin-top:18px">明细</div>
+          <div id="detailZone"></div>
+          <div id="sumZone"></div>
+        </div>
+        </div>
+
+        <div id="innerWrap">
+        <div class="sect" data-sec="3"><span class="chev">⌃</span>风险成效审批</div>
+        <div class="sectbox" id="box-inner" style="padding:14px 16px"><div id="innerZone"></div></div>
+        </div>
+      </div>
+
+      <!-- 项目变更 -->
+      <div class="pane" id="pane-change">
+        <div class="sect" data-sec="4"><span class="chev">⌃</span>变更信息<span class="spacer"></span>
+          <button class="btn navy sm" id="chgAdd">＋ 增加变更</button></div>
+        <div class="sectbox" style="padding:0">
+          <div class="tablewrap"><table class="lt chgtb"><thead><tr>
+            <th style="width:80px">序号</th><th style="width:220px">变更状态</th><th>变更发起人</th><th style="width:220px">变更日期</th>
+          </tr></thead><tbody id="chgInfoBody"></tbody></table></div>
+          <div class="pager" id="chgPager"></div>
+        </div>
+
+        <div class="sect" data-sec="5"><span class="chev">⌃</span>变更记录<span class="hint" id="chgRecTag"></span><span class="spacer"></span>
+          <button class="btn lite sm" id="chgSave">保存</button>
+          <button class="btn navy sm" id="chgSubmit">提交</button></div>
+        <div class="sectbox" style="padding:0">
+          <div class="tablewrap"><table class="lt chgtb"><thead><tr>
+            <th style="width:80px">序号</th><th style="width:150px">信息分类</th><th style="width:200px">信息</th>
+            <th>变更前</th><th>变更后</th><th style="width:110px">操作</th>
+          </tr></thead><tbody id="chgRecBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+      </div><!-- /.content -->
+    </div><!-- /.appbody -->
+  </div><!-- /.app -->
+
+</div><!-- /#stage -->
+
+  <div class="mask" id="mask">
+    <div class="modal">
+      <div class="mh"><span id="mTitle">弹窗</span><button class="x" id="mClose">✕</button></div>
+      <div class="mb" id="mBody"></div>
+      <div class="mf" id="mFoot"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div><!-- /#shell -->
+<script>
+/* ============================================================
+   其他类项目管理 · 页面结构（对齐工程结算项目管理样式）
+   数据字典 + 项目类型字段模板（均为系统可配项）
+   w：1/2/3 = 在"一行三列"栅格中占几列
+   ============================================================ */
+const DICT = {
+  subTypes: ['新建', '技改', '维修'],
+  indicators: ['挽损', '止损', '降本', '增效', '风险控制'],
+  listTypes: ['工程量清单', '最高投标限价'],
+  yesno: ['是', '否'],
+  attachRule: '单个文件上传不超过2GB'
+};
+const F = {
+  code  : (w) => ({ k:'code',    label:'项目编号', type:'ro',     w:w||1, req:1 }),
+  name  : (w) => ({ k:'name',    label:'项目名称', type:'text',   w:w||2, req:1 }),
+  driver: (w) => ({ k:'typeKey', label:'项目类型', type:'driver', w:w||1, req:1 }),
+  sub   : (w) => ({ k:'subType', label:'项目分类', type:'select', dict:'subTypes', req:1, w:w||1 }),
+  month : (w,l) => ({ k: l==='所属月份'?'month2':'month', label:l||'所属年月', type:'month', req:1, w:w||1 }),
+  owner : (w) => ({ k:'owner',   label:'项目负责人', type:'person', req:1, w:w||1 }),
+  members:(w)=> ({ k:'members', label:'项目组员', type:'multi', w:w||1 }),
+  amount: (w) => ({ k:'amount',  label:'报审金额', type:'money', unit:'元', req:1, w:w||1 }),
+  money : (k,label,w) => ({ k, label, type:'money', unit:'元', w:w||1 }),
+  bids  : (w) => ({ k:'bids', label:'投标单位 / 投标金额', type:'bids', w:w||3 }),
+  ta    : (k,label,w,max) => ({ k, label, type:'textarea', w:w||3, max:max||5000 })
+};
+/* 内控核验 · 明细型（清标 / 清单编制 / 立项评审 / 询价 / 项目过程咨询 / 成本优化） */
+const INNER_DETAIL = {
+  mode:'detail', attachCats:[],
+  cols:[{k:'person',label:'相关人员',type:'person'},
+        {k:'riskItem',label:'风险事项',type:'ta'},
+        {k:'exposure',label:'风险敞口金额',type:'num'},
+        {k:'control',label:'控制金额',type:'num'}]
+};
+/* 内控核验 · 字段型（风险提示 / 备忘录 / 报告） */
+const INNER_FX = {
+  mode:'fields', attachCats:['报告建议附件','证明文件','证明文件附件'],
+  fields:[{k:'bizTotal',label:'业务总金额',type:'money',w:1},
+          {k:'isApproved',label:'是否审批',type:'select',dict:'yesno',w:1},
+          {k:'preExposure',label:'预提报风险敞口金额',type:'money',w:1},
+          {k:'control',label:'控制金额',type:'money',w:1},
+          {k:'advice',label:'报告建议',type:'textarea',w:2}]
+};
+const TYPES = [
+  { key:'QB', name:'清标项目', prefix:'QB', title:'清标项目',
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),F.month(1),F.owner(1),F.members(1),
+            {k:'amount',label:'评审金额',type:'money',unit:'元',req:1,w:1},
+            F.money('maxPrice','最高限价',1), F.ta('conclusion','总结论',3,2000), F.bids(3)],
+    attaches:['清标报告','招标文件','投标文件','招标需求'],
+    summary:[{k:'relatedSum',label:'评审金额合计',unit:'元',red:1}],
+    inner: INNER_DETAIL,
+    detail:{ title:'个人明细', cols:[
+      {k:'person',label:'清标人员',type:'person'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'scope',label:'清标范围',type:'text'},
+      {k:'advice',label:'提出建议',type:'text'},
+      {k:'related',label:'评审金额',type:'num',unit:'元'},
+      {k:'adopted',label:'采纳金额',type:'num',unit:'元'},
+      ]} },
+
+  { key:'QDBZ', name:'清单编制项目', prefix:'QDBZ', title:'清单编制项目',
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),F.month(1),F.owner(1),F.members(1),
+            {k:'budgetLimit',label:'招标限额',type:'money',unit:'元',w:1},
+            F.ta('priceBasis','价格采购依据',3),F.ta('conclusion','总结论',3,2000)],
+    attaches:['编制需求','界限划分','图纸附件','材料品牌库','编制说明','招标清单','招标控制价','清单编制报告'],
+    summary:[{k:'relatedSum',label:'相关金额合计',unit:'元',red:1}],
+    inner: INNER_DETAIL,
+    detail:{ title:'个人明细', cols:[
+      {k:'person',label:'清单编制人员',type:'person'},
+      {k:'listType',label:'清单编制类型',type:'select',dict:'listTypes'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'advice',label:'提出建议',type:'text'},
+      {k:'content',label:'编制内容',type:'text'},
+      {k:'related',label:'相关金额',type:'num',unit:'元'},
+      ]} },
+
+  { key:'LX', name:'立项评审', prefix:'LX', title:'立项评审',
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),F.month(1),F.owner(1),F.members(1),
+            {k:'amount',label:'原立项评审金额',type:'money',unit:'元',req:1,w:1},
+            F.ta('conclusion','总结论',3,2000)],
+    attaches:['原立项附件','建议书','采纳附件'],
+    summary:[{k:'relatedSum',label:'相关金额合计',unit:'元',red:1}],
+    inner: INNER_DETAIL,
+    detail:{ title:'人员明细', cols:[
+      {k:'person',label:'立项评审人员',type:'person'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'content',label:'评审内容',type:'text'},
+      {k:'amountBefore',label:'原立项金额',type:'num',unit:'元'},
+      {k:'amountAfter',label:'评审后金额',type:'num',unit:'元'},
+      {k:'adopted',label:'采纳金额',type:'num',unit:'元'},
+      ]} },
+
+  { key:'FX', name:'风险提示/备忘录/报告', prefix:'FX', title:'风险提示',
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),F.month(1),F.owner(1),F.members(1),
+            {k:'riskAmount',label:'风险金额',type:'money',unit:'元',w:1},
+            F.ta('finding','发现问题',3)],
+    attaches:['风险提示备忘录'],
+    summary:[{k:'riskSum',label:'风险金额合计',unit:'元',red:1}],
+    inner: INNER_FX,
+    detail:{ title:'人员明细', cols:[
+      {k:'editor',label:'编制人',type:'person'},
+      {k:'reviewer',label:'审核人',type:'person'},
+      {k:'checker',label:'复核人',type:'person'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'content',label:'风险提示内容',type:'text'},
+      {k:'risk',label:'风险金额',type:'num',unit:'元'},
+      {k:'adopted',label:'采纳金额',type:'num',unit:'元'},
+      ]} },
+
+  { key:'XJ', name:'询价项目', prefix:'XJ', title:'询价', labW:1,
+    fields:[F.code(1),F.driver(1),F.sub(1),F.name(2),F.month(1),
+            {k:'inquirer',label:'询价人',type:'person',req:1,w:1},F.owner(1),F.members(1),
+            {k:'engOwner',label:'工程部项目负责人',type:'person',w:1},
+            {k:'material',label:'询价材料名称',type:'text',w:2},
+            {k:'quiryTotal',label:'询价总金额',type:'money',unit:'元',w:1}],
+    attaches:['询价附件','业务分配附件'],
+    summary:[],
+    inner: INNER_DETAIL,
+    detail:{ title:'个人明细', cols:[
+      {k:'inquirer',label:'询价人',type:'person'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'material',label:'询价材料名称',type:'text'},
+      {k:'price',label:'总价',type:'num',unit:'元'},
+      ]} },
+
+  { key:'ZC', name:'项目过程咨询', prefix:'ZC', title:'项目过程咨询', labW:1, autoAmount:'amount', changeAmount:1,
+    fields:[F.code(1),F.name(1),F.driver(1),F.sub(1),
+            {k:'amount',label:'报审金额',type:'money',unit:'元',req:1,w:1},
+            {k:'buildUnit',label:'建设单位',type:'text',w:1},
+            {k:'buildOwner',label:'建设单位项目负责人',type:'text',w:1},
+            {k:'owner',label:'项目负责人',type:'person',req:1,w:1},
+            {k:'members',label:'项目组员',type:'multi',w:1}],
+    attaches:['图纸','签证','合同','招标清单','上报预算','界限划分/施工节点','其他'],
+    summary:[{k:'amountSum',label:'报审金额合计',unit:'元',red:1}],
+    inner: INNER_DETAIL,
+    detail:{ title:'拨付明细', cols:[
+      {k:'person',label:'相关人员',type:'person'},
+      {k:'amount',label:'报审金额',type:'num',unit:'元'},
+      {k:'pay',label:'拨付金额',type:'num',unit:'元'},
+      {k:'deduct',label:'核减额',type:'num',unit:'元'},
+      {k:'advice',label:'建议性提示',type:'text'},
+      {k:'scope',label:'拨付范围',type:'text'}]} },
+
+  { key:'QT', name:'其他配合类工作', prefix:'QT', title:'其他配合类工作', labW:1,
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),F.month(1,'所属月份'),
+            F.owner(1),F.members(1),
+            {k:'hours',label:'耗时（天数）',type:'num',req:1,w:1},
+            {k:'lastAvgValue',label:'上月平均价值',type:'money',unit:'元',w:1},
+            {k:'otherWorkValue',label:'其他工作价值',type:'money',unit:'元',w:1},
+            F.ta('achievement','具体工作成果',3)],
+    attaches:['附件'],
+    summary:[],
+    detail:null },
+
+  { key:'CBYH', name:'成本优化', prefix:'CBYH', title:'成本优化', labW:1,
+    fields:[F.code(1),F.name(2),F.driver(1),F.sub(1),
+            {k:'buildUnit',label:'建设单位',type:'text',w:1},
+            {k:'buildOwner',label:'建设单位项目负责人',type:'text',w:1},
+            {k:'owner',label:'项目负责人',type:'person',req:1,w:1},
+            {k:'members',label:'项目成员',type:'multi',w:1}],
+    attachGroups:[
+      { k:'problem',    label:'提出问题', ph:'请输入提出的问题' },
+      { k:'conclusion', label:'总结论',   ph:'请输入总结论', max:2000 },
+      { k:'adoption',   label:'采纳情况', ph:'请输入采纳情况', attach:1 }],
+    summary:[{k:'optimizeSum',label:'优化金额合计',unit:'元',red:1}],
+    inner: INNER_DETAIL,
+    detail:{ title:'优化明细', cols:[
+      {k:'person',label:'相关人员',type:'person'},
+      {k:'indicator',label:'指标类型',type:'select',dict:'indicators'},
+      {k:'item',label:'优化事项',type:'text'},
+      {k:'optimize',label:'优化金额',type:'num',unit:'元'}]} }
+];
+const typeOf = (k) => TYPES.find(t => t.key === k);
+const effName = () => form && form.typeKey === 'FX' ? '业务报告审批' : '业务成效审批';
+const CHANGE_FIELDS = [
+  { k:'name',    label:'项目名称',   type:'text' },
+  { k:'owner',   label:'项目负责人', type:'person' },
+  { k:'members', label:'项目组员',   type:'multi' },
+  { k:'amount',  label:'报审金额（元）', type:'money' }
+];
+const hasField = (t, k) => !!t && (t.fields||[]).some(f => f.k === k);
+const changeFieldsOf = (t) => CHANGE_FIELDS.filter(f => hasField(t, f.k) && (f.k !== 'amount' || !!(t && t.changeAmount))).map(f => {
+  const tf = (t.fields||[]).find(x => x.k === f.k);
+  return (tf && tf.label && tf.label !== f.label) ? Object.assign({}, f, { label:tf.label + (f.type==='money' && !/（元）$/.test(tf.label) ? '（元）' : '') }) : f;
+});
+const STATUS = {
+  draft:{label:'草稿',cls:'draft'}, starting:{label:'立项审批中',cls:'running'},
+  running:{label:'正在执行',cls:'running'}, effAppr:{label:'成效审批中',cls:'running'},
+  innerAppr:{label:'内控审批中',cls:'running'}, closed:{label:'已关闭',cls:'closed'},
+  none:{label:'未选择',cls:'draft'}
+};
+/* 阶段：草稿 →（保存并提交）→ 正在执行 →（录入成效 → 内控核验）→ 已关闭；提交类操作不体现审批动作，直接视为通过 */
+const stageOf = (st) => { const st0 = st || 'none'; return {
+  basic  : (st0 === 'draft' || st0 === 'none'),
+  effect : (st0 === 'running'),
+  inner  : (st0 === 'running'),
+  appr   : (st0 === 'starting' || st0 === 'effAppr' || st0 === 'innerAppr'),
+  showEff: (st0 !== 'draft' && st0 !== 'none'),
+  showIn : (st0 !== 'draft' && st0 !== 'none') };};
+/* 列表页签：立项审批中 / 成效审批中 / 内控审批中 均归入「正在执行」；「变更审批中」不作为项目状态 */
+const TAB_GROUP = { draft:['draft'], running:['starting','running','effAppr','innerAppr'], closed:['closed'] };
+const curProj = () => projects.find(x => x.id === form.id);
+const effDone = () => { const p = curProj(); return !!(p && p.effectDone); };
+const innerDone = () => { const p = curProj(); return !!(p && p.innerDone); };
+/* 项目变更：仅「正在执行」可发起，项目关闭后不可变更；提交后立即生效（审批自动通过） */
+const chgOpen = (p) => !!(p && p.status === 'running');
+const SUMMAP = {
+  QB:{relatedSum:'related'}, QDBZ:{relatedSum:'related'},
+  LX:{relatedSum:'amountAfter'}, FX:{riskSum:'risk'},
+  ZC:{amountSum:'amount'}, CBYH:{optimizeSum:'optimize'}
+};
+</script><script>
+/* ============ 示例数据 ============ */
+const money = (v) => (v==null || v==='' ? '0.00' :
+  Number(v).toLocaleString('zh-CN', { minimumFractionDigits:2, maximumFractionDigits:2 }));
+const numOf = (v) => Number(String(v==null ? '' : v).replace(/,/g, '')) || 0;
+let SEQ = 9;
+const projects = [
+  { id:1, code:'QB-20261014000001', typeKey:'QB', subType:'新建', name:'烧结机除尘管道材料清标', month:'2026-10',
+    owner:'侯名伟', members:['侯名伟','郑宏'], amount:3200000.00, status:'running', approver:'—', effectDone:true,
+    fields:{ maxPrice:3500000,
+      bids:[{bidder:'甲供应商（江苏）', bidAmount:3120000}, {bidder:'乙供应商（浙江）', bidAmount:3260000},
+            {bidder:'丙供应商（山东）', bidAmount:3390000}],
+      conclusion:'对除尘管道材料进行清标，形成材料品牌库与建议清单，累计实现降本约 860,000 元。' },
+    detail:[{person:'侯名伟',indicator:'降本',scope:'除尘管道及管件',advice:'建议采用国标品牌替换进口品牌',related:1200000,adopted:860000},
+            {person:'郑宏',indicator:'挽损',scope:'阀门及法兰件',advice:'统一材质等级后重新询价',related:420000,adopted:210000}],
+    changes:[{time:'2026-10-15 10:20', by:'林福娇', reason:'材料价格随行情调整，报审金额同步修正',
+      items:[{k:'amount',label:'报审金额（元）',from:'3,000,000.00',to:'3,200,000.00'}], state:'已通过'},
+      {time:'2026-10-15 14:05', by:'林福娇', reason:'补充项目组员',
+      items:[{k:'members',label:'项目组员',from:'侯名伟',to:'侯名伟、郑宏'}], state:'已通过'}],
+    files:[{name:'清标报告-烧结机除尘.docx', size:246784, uploader:'侯名伟', time:'2026-10-14 09:32', cat:'清标报告'},
+      {name:'招标文件（定稿）.pdf', size:3152896, uploader:'郑宏', time:'2026-10-14 10:05', cat:'招标文件'},
+      {name:'投标文件-甲供材料.zip', size:8912896, uploader:'郑宏', time:'2026-10-15 14:40', cat:'投标文件'}],
+    inner:{ data:{}, detail:[
+        {person:'侯名伟',riskItem:'合同清单材质要求与投标品牌不一致，存在以次充好风险',exposure:180000,control:120000},
+        {person:'郑宏',riskItem:'阀门及法兰件未按标准要求送检复验',exposure:60000,control:60000}],
+      files:[{name:'材质复核记录（清标）.docx', size:73728, uploader:'侯名伟', time:'2026-10-15 15:10', cat:''}]} },
+  { id:2, code:'QDBZ-20261014000001', typeKey:'QDBZ', subType:'新建', name:'包装车间技改招标控制价编制', month:'2026-10',
+    owner:'鹿智慧', members:['鹿智慧','周楠'], amount:18600000.00, status:'running', approver:'—', effectDone:false,
+    fields:{ budgetLimit:19800000, priceBasis:'依据2026年第三季度信息价及同类工程结算数据', conclusion:'按图编制工程量清单与最高投标限价，控制价较概算下浮 6.2%。' },
+    detail:[{person:'鹿智慧',listType:'工程量清单',indicator:'降本',advice:'按图复核工程量',content:'清单编制及控制价',related:1160000}],
+    changes:[],
+    files:[{name:'编制需求说明.docx', size:96256, uploader:'鹿智慧', time:'2026-10-14 11:20', cat:'编制需求'},
+      {name:'最高投标限价汇总表.xlsx', size:186368, uploader:'周楠', time:'2026-10-15 09:08', cat:'招标控制价'}],
+    innerDone:false,
+    inner:{ data:{}, detail:[{person:'鹿智慧',riskItem:'清单特征描述与实际做法不一致，存在漏项风险',exposure:320000,control:260000}], files:[]} },
+  { id:3, code:'LX-20261014000001', typeKey:'LX', subType:'技改', name:'制冷站改造项目立项评审', month:'2026-10',
+    owner:'郑宏', members:['郑宏','侯名伟'], amount:24500000.00, status:'draft', approver:'—',
+    fields:{ conclusion:'' },
+    detail:[{person:'郑宏',indicator:'增效',content:'评审投资必要性及方案合理性',amountBefore:26000000,amountAfter:24500000,adopted:1500000}],
+    changes:[],
+    files:[{name:'投资建议书-制冷站改造.docx', size:158720, uploader:'郑宏', time:'2026-10-16 08:45', cat:'建议书'}] },
+  { id:4, code:'FX-20261014000001', typeKey:'FX', subType:'维修', name:'厂区管网维修工程风险提示', month:'2026-10',
+    owner:'周楠', members:['周楠'], amount:1800000.00, status:'closed', approver:'已完成', effectDone:true,
+    fields:{ riskAmount:1800000, finding:'现场管网维修签证存在工程量与合同清单不一致的风险。' },
+    detail:[{editor:'周楠',reviewer:'鹿智慧',checker:'侯名伟',indicator:'风险控制',content:'签证工程量与清单量差异',risk:1800000,adopted:600000}],
+    changes:[{time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'报审金额按实收方校正', state:'已通过',
+      items:[{k:'amount',label:'报审金额（元）',from:'1,650,000.00',to:'1,800,000.00'}]},
+      {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'补充项目组员', state:'已通过',
+      items:[{k:'members',label:'项目组员',from:'周楠',to:'周楠、李进'}]},
+      {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'负责人变更', state:'已通过',
+      items:[{k:'owner',label:'项目负责人',from:'鹿智慧',to:'周楠'}]},
+      {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'项目名称规范', state:'已通过',
+      items:[{k:'name',label:'项目名称',from:'厂区管网维修风险提示',to:'厂区管网维修工程风险提示'}]}],
+    innerDone:true,
+    inner:{ data:{ bizTotal:12000000, isApproved:'是', preExposure:1800000, control:1500000,
+        advice:'建议维修工程量按实收方并同步办理签证，超合同范围部分先审批后实施。' },
+      detail:[],
+      files:[{name:'风险提示备忘录（扫描件）.docx', size:74240, uploader:'周楠', time:'2026-10-15 16:12', cat:'报告建议附件'},
+        {name:'现场签证单-002.pdf', size:1046528, uploader:'周楠', time:'2026-10-15 16:30', cat:'证明文件'},
+        {name:'工程量对比台账.xlsx', size:58368, uploader:'鹿智慧', time:'2026-10-15 17:05', cat:'证明文件附件'}] },
+    files:[{name:'厂区管网维修风险提示备忘录.docx', size:74240, uploader:'周楠', time:'2026-10-15 16:12', cat:'风险提示备忘录'}] },
+  { id:5, code:'XJ-20261014000001', typeKey:'XJ', subType:'新建', name:'不锈钢阀门询价', month:'2026-10',
+    owner:'侯名伟', members:[], amount:965000.00, status:'running', approver:'—', effectDone:true,
+    fields:{ inquirer:'郑宏', engOwner:'鹿智慧', material:'不锈钢球阀 DN100 PN16', quiryTotal:965000 },
+    detail:[{inquirer:'郑宏',indicator:'降本',material:'不锈钢球阀 DN100 PN16',price:965000}],
+    changes:[],
+    files:[{name:'不锈钢球阀询价单.xlsx', size:57344, uploader:'郑宏', time:'2026-10-15 10:30', cat:'询价附件'}],
+    inner:{ data:{}, detail:[{person:'郑宏',riskItem:'三家报价口径不一致，需统一含税与运费口径',exposure:48000,control:32000}], files:[]} },
+  { id:6, code:'ZC-20261014000001', typeKey:'ZC', subType:'技改', name:'乳品车间扩产项目过程咨询', month:'2026-10',
+    owner:'鹿智慧', members:['鹿智慧','李进'], amount:965000.00, status:'running', approver:'—', effectDone:true,
+    fields:{ buildUnit:'伊利液态奶事业部', buildOwner:'王鹏' },
+    detail:[{person:'鹿智慧',amount:600000,pay:480000,deduct:25000,advice:'建议按进度分两次拨付',scope:'车间地面及基础工程'},
+            {person:'李进',amount:365000,pay:300000,deduct:12000,advice:'核减重复计价部分',scope:'设备安装配合工程'}],
+    changes:[],
+    files:[{name:'扩产工程图纸（建筑）.pdf', size:5242880, uploader:'鹿智慧', time:'2026-10-16 09:15', cat:'图纸'},
+      {name:'现场签证单-001.pdf', size:1046528, uploader:'李进', time:'2026-10-16 11:02', cat:'签证'},
+      {name:'施工合同-扩产工程.docx', size:262144, uploader:'郑宏', time:'2026-10-16 11:20', cat:'合同'},
+      {name:'上报预算-扩产工程.xlsx', size:186368, uploader:'鹿智慧', time:'2026-10-16 11:40', cat:'上报预算'}],
+    innerDone:true,
+    inner:{ data:{}, detail:[{person:'鹿智慧',riskItem:'进度款拨付比例高于形象进度',exposure:120000,control:80000}], files:[]} },
+  { id:7, code:'QT-20261014000001', typeKey:'QT', subType:'维修', name:'工程台账配合整理', month:'2026-10',
+    owner:'侯名伟', members:['侯名伟','李进'], amount:120000.00, status:'closed', approver:'已完成', effectDone:true,
+    fields:{ hours:6, lastAvgValue:80, otherWorkValue:480, achievement:'配合业务单位完成工程台账清理与归档，整理资料 32 卷。' },
+    detail:[], changes:[],
+    files:[{name:'工程台账清理明细.xlsx', size:133120, uploader:'侯名伟', time:'2026-10-16 14:20', cat:'附件'}] },
+  { id:8, code:'CBYH-20261014000001', typeKey:'CBYH', subType:'新建', name:'包装线成本优化专项', month:'',
+    owner:'鹿智慧', members:['鹿智慧','郑宏','李进'], amount:0, status:'running', approver:'—', effectDone:true,
+    fields:{ buildUnit:'伊利液态奶事业部', buildOwner:'王鹏',
+      problem:'包装线备件规格不统一、重复采购，运行参数未按负载调整，采购与能耗成本偏高。',
+      conclusion:'统一备件规格并集中采购，同时按负载重新设定运行参数，年度可优化金额约 1,280,000 元。',
+      adoption:'建设单位已采纳，计划 2026 年第四季度起执行。' },
+    innerDone:true,
+    inner:{ data:{}, detail:[{person:'鹿智慧',riskItem:'集中采购后供应商交付能力不足',exposure:200000,control:150000}], files:[]},
+    detail:[{person:'鹿智慧',indicator:'降本',item:'备件规格统一、集中采购',optimize:860000},
+            {person:'郑宏',indicator:'降本',item:'包装线运行参数优化，降低能耗',optimize:420000}],
+    changes:[{time:'2026-10-16 10:40', by:'林福娇', reason:'项目负责人调整',
+      items:[{k:'owner',label:'项目负责人',from:'郑宏',to:'鹿智慧'}], state:'已通过'}],
+    files:[{name:'建设单位采纳意见.pdf', size:204800, uploader:'李进', time:'2026-10-16 08:30', cat:'采纳情况'}] }
+];
+
+/* ============ 工具 ============ */
+const $ = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('on'),2200); }
+function initials(n){ return (n||'?').slice(0,1); }
+function esc(s){ return String(s==null?'':s).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function chip(name, removable, key){
+  return '<span class="tagchip"><i>'+initials(name)+'</i>'+name
+    + (removable ? '<span class="rm" data-rm="'+name+'" data-pick="'+key+'">×</span>' : '')+'</span>';
+}
+const PEOPLE = ['侯名伟','郑宏','鹿智慧','周楠','李进','赵婷婷','林福娇'];
+
+/* 变更单里的「项目组员」：多人选择（存为顿号分隔的名单，控件内直接点选人名） */
+function chgMemItem(){ return ((chg && chg.items) || []).find(x => x.k === 'members'); }
+function chgMemList(){
+  const it = chgMemItem();
+  return String((it && it.after) || '').split(/[、,，]/).filter(n => n && n !== '—');
+}
+
+/* 人员选择控件 */
+function pickList(key){
+  if (key === 'chgMembers') return chgMemList();
+  return String(form.data[key]||'').split(',').filter(Boolean);
+}
+function pickBox(key, multi, readonly){
+  const list = pickList(key);
+  return '<div class="pickwrap"><div class="pickbox'+(readonly?' ro':'')+'" data-pick="'+key+'" data-multi="'+(multi?1:0)+'">'
+    + (list.length ? list.map(n=>chip(n, multi && !readonly, key)).join('') : '<span class="hint">请选择人员</span>')
+    + '</div>'+(readonly?'':'<button class="iconbtn" data-pick="'+key+'" title="选择人员">⌕</button>')
+    + '<input type="hidden" data-k="'+key+'" value="'+esc(list.join(','))+'"></div>';
+}
+function refreshPick(key){
+  const box = $('.pickbox[data-pick="'+key+'"]');
+  if (!box) return;
+  const multi = box.dataset.multi === '1';
+  const list = pickList(key);
+  box.innerHTML = list.length ? list.map(n=>chip(n, multi, key)).join('') : '<span class="hint">请选择人员</span>';
+  const wrap = box.parentElement || box.parentNode;
+  const hid = (wrap && wrap.querySelector) ? wrap.querySelector('input[type=hidden]')
+    : $('input[type=hidden][data-k="'+key+'"]');
+  if (hid) hid.value = key === 'chgMembers' ? list.join('、') : list.join(',');
+}
+function setPick(key, arr){
+  if (key === 'chgMembers'){
+    const it = chgMemItem(); if (it) it.after = arr.join('、');
+  }
+  else form.data[key] = arr.join(',');
+  refreshPick(key);
+}
+function openPicker(key){
+  const box = $('.pickbox[data-pick="'+key+'"]');
+  const multi = box ? box.dataset.multi === '1' : true;
+  const cur = pickList(key);
+  openModal('选择人员',
+    '<div class="hint" style="margin-bottom:8px">'+(multi?'可多选：点击人员切换选中状态':'单选：点击人员即选中')+'</div>'
+    + '<div class="chips">'+PEOPLE.map(n=>'<span class="chip2" style="cursor:pointer;'+(cur.indexOf(n)>=0?'background:#e8f0fb;border-color:#a9c7ea;':'')+'" data-p="'+n+'">'+n+'</span>').join('')+'</div>',
+    [{label:'关闭'}]);
+  $('#mBody').querySelectorAll('[data-p]').forEach(el => el.onclick = () => {
+    const n = el.dataset.p;
+    if (multi){
+      const arr = pickList(key), i = arr.indexOf(n);
+      i >= 0 ? arr.splice(i,1) : arr.push(n);
+      setPick(key, arr);
+      el.style.background = arr.indexOf(n) >= 0 ? '#e8f0fb' : '';
+      el.style.borderColor = arr.indexOf(n) >= 0 ? '#a9c7ea' : '';
+    } else {
+      setPick(key, [n]); closeModal();
+    }
+  });
+}
+
+/* ============ 列表 ============ */
+let listTab = '';
+function filtered(){
+  const f=$('#fField').value, fkw=($('#fFieldKw').value||'').trim(), kw=($('#fKw').value||'').trim();
+  return projects.filter(p => {
+    if (listTab && (TAB_GROUP[listTab] || []).indexOf(p.status) < 0) return false;
+    const tn = (typeOf(p.typeKey)||{}).name || '', stn = (STATUS[p.status]||{}).label || '';
+    if (fkw){
+      const pv = f === 'status' ? stn
+        : (f === 'code' ? p.code
+        : (f === 'type' ? tn
+        : (f === 'name' ? p.name
+        : (f === 'owner' ? (p.owner||'')
+        : (f === 'members' ? (p.members||[]).join('、')
+        : p.code+p.name+(p.owner||''))))));
+      if (pv.indexOf(fkw) < 0) return false;
+    }
+    if (kw){
+      const hay = [p.code,p.name,p.owner,(p.members||[]).join('、'),p.subType||'',tn,p.month||'',stn].join(' ');
+      if (hay.indexOf(kw) < 0) return false;
+    }
+    return true;
+  });
+}
+function sumOf(p){
+  const map = SUMMAP[p.typeKey] || {}, out = {};
+  Object.keys(map).forEach(key => { out[key] = (p.detail||[]).reduce((a,r) => a + (Number(r[map[key]])||0), 0); });
+  return out;
+}
+function renderTabs(){
+  const defs = [['', '全部'], ['draft','草稿'], ['running','正在执行'], ['closed','已关闭']];
+  $('#tabs').innerHTML = defs.map(([k, label]) =>
+    '<button class="'+(listTab===k?'on':'')+'" data-tab="'+k+'">'+label+'</button>').join('');
+}
+let selId = null;                    /* 列表当前选中行 */
+function renderList(){
+  const rows = filtered();
+  $('#listBody').innerHTML = rows.map((p,i) => {
+    const t = typeOf(p.typeKey), st = STATUS[p.status];
+    const ops = ['<button class="lnk" data-op="view" data-id="'+p.id+'">查看</button>'];
+    if (p.status === 'draft'){
+      ops.push('<button class="lnk" data-op="edit" data-id="'+p.id+'">编辑</button>');
+      ops.push('<button class="lnk mute" data-op="del" data-id="'+p.id+'">删除</button>');
+    }
+    if (p.status === 'running' && !p.effectDone){
+      ops.push('<button class="lnk dark" data-op="effect" data-id="'+p.id+'">录入成效</button>');
+    }
+    if (p.status === 'running' && p.effectDone){
+      if (!p.innerDone) ops.push('<button class="lnk dark" data-op="inner" data-id="'+p.id+'">内控核验</button>');
+      ops.push('<button class="lnk" data-op="close" data-id="'+p.id+'">项目关闭</button>');
+    }
+    if (p.status === 'closed'){
+      ops.push('<button class="lnk" data-op="reopen" data-id="'+p.id+'">取消关闭</button>');
+    }
+    return '<tr data-rowid="'+p.id+'"'+(selId===p.id?' class="sel"':'')+'>'
+      + '<td class="ck"><input type="checkbox" data-rowck="'+p.id+'"></td>'
+      + '<td>'+(i+1)+'</td>'
+      + '<td><span class="st '+st.cls+'">'+st.label+'</span></td>'
+      + '<td>'+p.code+'</td>'
+      + '<td>'+t.name+'</td>'
+      + '<td><span style="color:#3f75a5;cursor:pointer" data-op="view" data-id="'+p.id+'">'+p.name+'</span></td>'
+      + '<td>'+(p.subType||'—')+'</td>'
+      + '<td>'+(p.month || '—')+'</td>'
+      + '<td>'+p.owner+'</td>'
+      + '<td>'+((p.members||[]).join('、') || '—')+'</td>'
+      + '<td style="white-space:nowrap">'+ops.join('')+'</td>'
+      + '</tr>';
+  }).join('') || '<tr><td colspan="11" style="text-align:center;padding:30px;color:#909399">暂无数据</td></tr>';
+  $('#pageInfo').textContent = '共 '+rows.length+' 条';
+  renderTabs();
+}
+</script><script>
+/* ============ 表单：项目信息 ============ */
+let form = { id:null, typeKey:'', status:'none', data:{}, detail:[], files:[] };
+/* 编辑态：默认只读（点「编辑」后才可编辑，保存后回到只读）；新建项目默认处于编辑态 */
+let editing = false;
+const canEditStatus = () => { const s = form.status; return s === 'none' || s === 'draft' || s === 'running'; };
+/* 编辑范围随阶段收敛：成效已提交（内控核验阶段）后基本信息与成效信息锁定，仅内控核验可编辑 */
+const ro = (kind) => {
+  if (!(editing && canEditStatus())) return true;
+  const st = stageOf(form.status);
+  if (kind === 'basic')  return !st.basic;
+  if (kind === 'effect') return !st.effect || (form.status === 'running' && effDone());
+  if (kind === 'inner')  return !st.inner || (form.status === 'running' && effDone() && innerDone());
+  return !st[kind];
+};
+function newCode(prefix){
+  const d = new Date(), p = (n)=>String(n).padStart(2,'0');
+  return prefix + '-' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + String(SEQ).padStart(6,'0');
+}
+function optTypes(cur){
+  return '<option value="">请选择</option>' + TYPES.map(t => '<option value="'+t.key+'"'+(t.key===cur?' selected':'')+'>'+t.name+'</option>').join('');
+}
+function optDict(dict, cur){
+  return '<option value="">请选择</option>' + (DICT[dict]||[]).map(o => '<option'+(o===cur?' selected':'')+'>'+o+'</option>').join('');
+}
+/* 6 列基础栅格：w=1 → 占 2 格、w=2 → 占 4 格、w=3 → 整行；
+   字段按顺序分“段”（整行字段自成分隔），段内逐行排布，
+   行尾不足整行时等分补满，末行只剩一个字段时改用最后 4 个字段拆成两行半宽，
+   保证每行都填满、控件宽度有规律、左边缘对齐 */
+function layoutFields(t){
+  const units = t.fields.map(f => ({ f:f, s:Math.min(Math.max(f.w||1, 1), 3) * 2 }));
+  const rows = [];
+  let seg = [];
+  const flush = () => {
+    if (!seg.length) return;
+    let grid = [], row = [], used = 0;
+    seg.forEach(x => {
+      if (used + x.s > 6){ grid.push(row); row = []; used = 0; }
+      row.push(x); used += x.s;
+      if (used === 6){ grid.push(row); row = []; used = 0; }
+    });
+    if (row.length) grid.push(row);
+    const last = grid[grid.length-1], prev = grid[grid.length-2];
+    if (last && last.length === 1 && prev && prev.length === 3){
+      const tail = prev.concat(last);                       /* 4 个字段 → 两行，每行两个半宽 */
+      grid = grid.slice(0, -2);
+      grid.push([tail[0], tail[1]], [tail[2], tail[3]]);
+      tail.forEach(x => { x.s = 3; });
+    }
+    grid.forEach(r => {
+      const sum = r.reduce((a,x) => a + x.s, 0);
+      if (sum < 6 && r.length > 1) r.forEach(x => { x.s = 6 / r.length; });
+    });
+    rows.push.apply(rows, grid);
+    seg = [];
+  };
+  units.forEach(x => { if (x.s >= 6){ flush(); rows.push([x]); } else seg.push(x); });
+  flush();
+  return units;
+}
+/* 可编辑明细表格：业务成效明细与清标投标单位共用 */
+const GRID_ACTIONS = ['添加明细','复制行','插行','删行','清除数据','反选','取消选择'];
+const BID_COLS = [
+  { k:'bidder', label:'投标单位' },
+  { k:'bidAmount', label:'投标金额', type:'num', unit:'元', w:220 }
+];
+function gridRows(name){
+  if (name === 'bids') return form.data.bids || (form.data.bids = []);
+  if (name === 'risk'){ const d = innerData(); return d.detail || (d.detail = []); }
+  return form.detail;
+}
+function gridBodyId(name){ return name === 'bids' ? 'bidsBody' : (name === 'risk' ? 'innerBody' : 'detailBody'); }
+function gridHtml(name, cols, rows, RO, opts){
+  if (typeof opts === 'string') opts = { emptyText:opts };
+  opts = opts || {};
+  const bodyId = gridBodyId(name), tableCls = 'lt editable' + (name === 'bids' ? ' bids' : '') + (opts.tableClass ? ' '+opts.tableClass : '');
+  const actions = opts.actions || GRID_ACTIONS;
+  const showCk = !RO && opts.checkbox !== false, showSeq = opts.sequence !== false;
+  const headerHtml = opts.headerHtml || ((showCk?'<th class="ck"><input type="checkbox" data-ckall="'+name+'"></th>':'')
+    + (showSeq?'<th style="width:48px">序号</th>':'')
+    + cols.map(c=>'<th'+(c.w?' style="width:'+c.w+'px"':'')+'>'+c.label+(c.unit?'（'+c.unit+'）':'')+'</th>').join(''));
+  const flatRows = rows.length ? rows.map((r,i)=>'<tr>'+(showCk?'<td class="ck"><input type="checkbox" data-ck="'+i+'" data-grid="'+name+'"></td>':'')
+    + (showSeq?'<td style="text-align:center;color:#909399">'+(i+1)+'</td>':'')
+    + cols.map(c => RO ? '<td class="rotext">'+cellText(c,r)+'</td>' : cellHtml(c,i,r,name)).join('')+'</tr>').join('') : '';
+  const bodyRows = opts.renderRows ? opts.renderRows(RO) : flatRows;
+  const colspan = opts.colspan || (cols.length + (showCk?1:0) + (showSeq?1:0));
+  return (RO ? '' : '<div class="toolbar" data-grid="'+name+'">'
+      + actions.map((x,i)=>'<button class="tbtn" data-tbtn="'+x+'">'+(i===0?'＋ ':'')+x+'</button>').join('')
+    + '</div>')
+    + '<div class="tablewrap"'+(RO?' style="border:1px solid #EBEEF5;border-radius:2px"':' style="border:1px solid #ebeef5;border-top:none;border-radius:0 0 4px 4px"')+'>'
+    + '<table class="'+tableCls+'">'+(opts.colgroup||'')+'<thead><tr>'+headerHtml+'</tr></thead><tbody id="'+bodyId+'">'
+      + (rows.length ? bodyRows
+        : '<tr><td colspan="'+colspan+'" style="text-align:center;padding:24px;color:#909399">'+(opts.emptyText||'暂无明细，点击“添加明细”')+'</td></tr>')
+    + '</tbody></table></div>';
+}
+function bidsHtml(cls, lb, RO){
+  return '<div class="'+cls+'" style="display:block">'
+    + '<div class="subhd" style="margin:2px 0 10px">'+lb+'</div>'
+    + '<div id="bidsZone">'+gridHtml('bids', BID_COLS, gridRows('bids'), RO, '暂无投标单位，点击“添加明细”录入')+'</div>'
+    + '</div>';
+}
+function renderBids(){
+  const z = $('#bidsZone'); if (!z) return;
+  z.innerHTML = gridHtml('bids', BID_COLS, gridRows('bids'), ro('basic'), '暂无投标单位，点击“添加明细”录入');
+}
+function fieldHtml(f, span){
+  const cls = 'frow gs'+(span||2);
+  const RO = ro('basic');                          /* 非编辑态或非草稿阶段：基本信息只读 */
+  const v = form.data[f.k] == null ? '' : form.data[f.k];
+  const lb = '<label class="'+(f.req?'req':'')+'">'+f.label+((f.type==='money'||f.unit)?'（元）':'')+'</label>';
+  switch (f.type){
+    case 'driver':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><select class="ctl" id="typeSel"'+(form.id?' disabled':'')+'>'+optTypes(form.typeKey)+'</select></div></div>';
+    case 'ro':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><input class="ctl ro" readonly value="'+esc(v||'选择类型后自动生成')+'"></div></div>';
+    case 'text':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><input class="ctl'+(RO?' ro':'')+'" data-k="'+f.k+'" value="'+esc(v)+'" placeholder="请输入"'+(RO?' readonly':'')+'>'
+        + (f.tip?'<div class="tip">'+f.tip+'</div>':'')+'</div></div>';
+    case 'select':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><select class="ctl" data-k="'+f.k+'"'+(RO?' disabled':'')+'>'+optDict(f.dict, v)+'</select>'
+        + (f.tip?'<div class="hint">'+f.tip+'</div>':'')+'</div></div>';
+    case 'month':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><input class="ctl'+(RO?' ro':'')+'" type="month" data-k="'+f.k+'" value="'+esc(v||'2026-10')+'"'+(RO?' readonly':'')+'></div></div>';
+    case 'num': case 'money': {
+      const ro = (f.ro || RO) ? ' readonly' : '';
+      return '<div class="'+cls+'">'+lb+'<div class="fctl"><input class="ctl'+((f.ro||RO)?' ro':'')+'" data-k="'+f.k+'" value="'+esc(v)+'" placeholder="请输入"'+ro+'>'
+        + (f.tip?'<div class="tip">'+f.tip+'</div>':'')+'</div></div>';
+    }
+    case 'person':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl">'+pickBox(f.k, false, RO)+(f.tip?'<div class="tip">'+f.tip+'</div>':'')+'</div></div>';
+    case 'multi':
+      return '<div class="'+cls+'">'+lb+'<div class="fctl">'+pickBox(f.k, true, RO)+'</div></div>';
+    case 'bids':
+      return bidsHtml(cls, lb, RO);
+    case 'textarea': {
+      const max = f.max || 5000;
+      return '<div class="'+cls+'" style="align-items:flex-start">'+lb
+        + '<div class="fctl"><textarea class="ctl'+(RO?' ro':'')+'" data-k="'+f.k+'" maxlength="'+max+'" placeholder="请输入"'+(RO?' readonly':'')+'>'+esc(v)+'</textarea>'
+        + '<div class="taCount">'+String(v||'').length+' / '+max+'</div></div></div>';
+    }
+  }
+  return '';
+}
+function renderStatus(){
+  renderActions();
+}
+/* 右上角按钮：「编辑 / 保存」成对出现（非编辑态显示「编辑」，点开后「编辑」隐藏、「保存」出现；保存后又回到「编辑」）；
+   「保存并提交」随阶段出现（正在执行）；审批环节不在原型中体现（提交即视为审批通过）；已关闭不显示 */
+function renderActions(){
+  const bE = $('#btnEdit'), bS = $('#btnSave'), bT = $('#btnSubmit'), lS = $('#saveLb'), lT = $('#submitLb');
+  if (!bE || !bS || !bT) return;
+  const s = form.status, has = !!form.id;
+  if (s === 'closed' || stageOf(s).appr || (s === 'running' && effDone() && innerDone())){
+    bE.style.display = 'none'; bS.style.display = 'none'; bT.style.display = 'none'; return;
+  }
+  bE.style.display = editing ? 'none' : '';
+  bS.style.display = editing ? '' : 'none';
+  if (!has || s === 'draft' || s === 'none'){
+    if (lS) lS.textContent = '保存';
+    bT.style.display = editing ? '' : 'none';
+    if (lT) lT.textContent = '保存并提交';
+    return;
+  }
+  if (lS) lS.textContent = effDone() ? '保存风险成效审批' : '保存' + effName();
+  bT.style.display = '';
+  if (lT) lT.textContent = '保存并提交';
+}
+function startEdit(){
+  if (!canEditStatus()) return toast('当前状态不可编辑：仅草稿与正在执行阶段可编辑');
+  if (form.status === 'running' && effDone() && innerDone()) return toast('风险成效审批已完成，可直接关闭项目');
+  editing = true; renderForm();
+    toast(form.id ? (form.status === 'running' && effDone()
+      ? '已进入编辑状态：基本信息与' + effName() + '已锁定，仅【风险成效审批】可编辑'
+      : '已进入编辑状态：修改后点击「保存」或「保存并提交」')
+    : '请选择【项目类型】并录入基本信息后点击「保存」或「保存并提交」');
+}
+function renderForm(){
+  const t = typeOf(form.typeKey), st = stageOf(form.status);
+  $('#formTypeHint').textContent = t ? '' : '（请先选择项目类型）';
+  const et = $('#effTitle'); if (et) et.textContent = effName();
+  $('#dynFields').classList.toggle('wlab', !!(t && t.labW));
+  if (!t){
+    $('#dynFields').innerHTML =
+        '<div class="frow g1"><label class="req">项目类型</label><div class="fctl"><select class="ctl" id="typeSel">'+optTypes('')+'</select>'
+      + '</div></div>'
+      + '<div class="frow g1"><label>项目编号</label><div class="fctl"><input class="ctl ro" readonly value="选择类型后自动生成"></div></div>'
+      + '<div class="frow g1"><label>所属年月</label><div class="fctl"><input class="ctl" type="month" value="2026-10" disabled></div></div>';
+  } else {
+    if (!t.laid) t.laid = layoutFields(t);
+    $('#dynFields').innerHTML = t.laid.map(x => fieldHtml(x.f, x.s)).join('');
+  }
+  syncOtherWorkValue();
+  const ew = $('#effWrap'); if (ew) ew.style.display = st.showEff ? '' : 'none';
+  renderAttach(); renderSummary(); renderDetail(); renderInner();
+  renderStatus();
+}
+/* ============ 相关附件：列表 + 上传弹窗 ============ */
+const UPLOADER = '林福娇';
+const FILE_POOL = [
+  ['avatar_warm_sun_512.png', 14941], ['清标报告-烧结机除尘.docx', 246784],
+  ['招标文件（定稿）.pdf', 3152896], ['投标文件-甲供材料.zip', 8912896],
+  ['工程量清单-土建.xlsx', 458240], ['最高投标限价汇总表.xlsx', 186368],
+  ['现场签证扫描件.pdf', 1046528], ['材料品牌库.docx', 96256]
+];
+let upList = [];                  /* 上传弹窗中的文件行 */
+let upTarget = null;              /* 上传目标 {list, cats, onDone} */
+let onModalClose = null;          /* 弹窗关闭后的收尾动作 */
+const fileList = () => (form.files || (form.files = []));
+function sizeText(b){
+  if (b == null || b === '') return '—';
+  return b >= 1048576 ? (b/1048576).toFixed(2)+' MB' : (b/1024).toFixed(2)+' KB';
+}
+function nowStamp(){
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+function newCat(){ const t = typeOf(form.typeKey); return (t && t.attaches && t.attaches[0]) || ''; }
+const ICON_UP = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/></svg>';
+/* 分组附件类型（成本优化）：每个分组 = 文本 + 该分组下的附件 */
+function renderAttachGroups(t){
+  const z = $('#attachGroups'); if (!z) return;
+  const RO = ro('effect');
+  const all = fileList();
+  z.innerHTML = t.attachGroups.map((g, gi) => {
+    const rows = all.map((f,i) => ({ f:f, i:i })).filter(x => x.f.cat === g.label);
+    const gmax = g.max || 5000;
+    let html = '<div class="aggroup">'
+      + '<div class="aghead"><span class="aglb">'+esc(g.label)+'</span></div>'
+      + '<div class="agtext"><textarea class="ctl'+(RO?' ro':'')+'" data-gk="'+g.k+'" maxlength="'+gmax+'" placeholder="'+esc(g.ph||'请输入')+'"'+(RO?' readonly':'')+'>'+esc(form.data[g.k]||'')+'</textarea>'
+        + '<div class="taCount">'+String(form.data[g.k]||'').length+' / '+gmax+'</div></div>';
+    if (g.attach){
+      html += '<div class="upbar" style="margin-top:10px"><span class="ulb">相关附件</span>'
+        + (RO ? '' : '<button class="btn navy sm" data-gup="'+gi+'">'+ICON_UP+'上传附件</button>')+'</div>'
+        + '<div class="tablewrap" style="margin-top:6px"><table class="ft"><thead><tr>'
+          + '<th>文件名</th><th style="width:110px">上传人</th><th style="width:110px">文件大小</th>'
+          + '<th style="width:170px">上传时间</th><th style="width:96px;text-align:center">操作</th>'
+        + '</tr></thead><tbody>'
+          + (rows.length ? rows.map(x =>
+              '<tr><td>'+esc(x.f.name)+'</td><td>'+(x.f.uploader||'—')+'</td><td>'+sizeText(x.f.size)+'</td>'
+              + '<td>'+(x.f.time||'—')+'</td><td class="op"><button class="lnk" data-gdl="'+x.i+'">下载</button>'+(RO?'':'<button class="lnk" data-gdel="'+x.i+'">删除</button>')+'</td></tr>').join('')
+            : '<tr class="fempty"><td colspan="5">'+(RO?'暂无附件':'暂无附件，点击「上传附件」选择文件')+'</td></tr>')
+        + '</tbody></table></div>';
+    }
+    return html + '</div>';
+  }).join('');
+}
+function renderAttach(){
+  const t = typeOf(form.typeKey), body = $('#fileBody');
+  renderUpMenu();
+  const RO = ro('effect');
+  const bu = $('#btnUpload');
+  if (bu){
+    const wp = (bu.parentNode && bu.parentNode.classList && bu.parentNode.classList.contains('updd')) ? bu.parentNode : bu;
+    wp.style.display = RO ? 'none' : '';
+  }
+  const flat = $('#attachFlat'), grp = $('#attachGroups');
+  const grouped = !!(t && t.attachGroups);
+  if (flat) flat.style.display = grouped ? 'none' : '';
+  if (grp) grp.style.display = grouped ? '' : 'none';
+  if (grouped){ renderAttachGroups(t); return; }
+  if (!body) return;
+  if (!t){ body.innerHTML = '<tr class="fempty"><td colspan="6">请先选择项目类型</td></tr>'; return; }
+  if (!t.attaches){ body.innerHTML = '<tr class="fempty"><td colspan="6">请先选择项目类型</td></tr>'; return; }
+  const all = fileList();
+  const rows = all.map((f,i) => ({ f:f, i:i }));
+  body.innerHTML = rows.length ? rows.map(x => {
+    const f = x.f, i = x.i;
+    return '<tr>'
+      + '<td>'+esc(f.name)+'</td>'
+      + '<td>'+esc(f.cat||'—')+'</td>'
+      + '<td>'+(f.uploader||'—')+'</td>'
+      + '<td>'+sizeText(f.size)+'</td>'
+      + '<td>'+(f.time||'—')+'</td>'
+      + '<td class="op"><button class="lnk" data-fdl="'+i+'">下载</button>'+(RO ? '' : '<button class="lnk" data-fdel="'+i+'">删除</button>')+'</td></tr>';
+  }).join('') : '<tr class="fempty"><td colspan="6">'+(RO?'暂无附件':'暂无附件，点击「上传附件」选择文件')+'</td></tr>';
+}
+function closeUpMenus(){ $$('.upmenu').forEach(m => m.classList.remove('on')); }
+function renderUpMenu(){
+  const t = typeOf(form.typeKey), m = $('#upMenu');
+  if (!m) return;
+  const cats = (t && t.attaches) || [];
+  m.innerHTML = cats.map(c => '<button type="button" data-ucat="'+esc(c)+'">'+esc(c)+'</button>').join('');
+  const bt = $('#btnUpload'), cv = bt ? bt.querySelector('.cv2') : null;
+  if (cv) cv.style.display = cats.length ? '' : 'none';
+}
+function openUpload(target){
+  upTarget = target || { list:fileList(), cats:true, onDone:renderAttach };
+  upList = [];
+  const cats = (upTarget && upTarget.catList) || [];
+  const catSel = cats.length
+    ? '<div class="upbar" style="margin:0 0 10px"><span class="cslb">附件分类</span>'
+      + '<select class="ctl" id="upCatSel" style="width:180px;height:30px;font-size:12.5px">'
+      + cats.map(c => '<option'+(c===upTarget.cat?' selected':'')+'>'+esc(c)+'</option>').join('') + '</select></div>'
+    : '';
+  const body = catSel + '<div class="tablewrap"><table class="ft"><thead><tr>'
+      + '<th>文件名</th>'
+      + '<th style="width:120px">文件大小</th>'
+      + '<th style="width:240px">进度</th>'
+      + '</tr></thead><tbody id="upBody">'
+      + '<tr class="fempty"><td colspan="3">尚未选择文件</td></tr></tbody></table></div>'
+    + '<div class="upnote">单个文件上传不超过2GB</div>'
+    + '<div><button class="btn" id="btnPickFile"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>选择文件</button></div>';
+  openModal('上传附件', body, [{ label:'关闭', cls:'navy' }], { wide:true });
+  onModalClose = commitUpload;
+  $('#btnPickFile').onclick = pickFiles;
+}
+function pickFiles(){
+  const n = upList.length ? 1 : 3;
+  for (let k = 0; k < n; k++){
+    const p = FILE_POOL[(upList.length + k) % FILE_POOL.length];
+    upList.push({ name:p[0], size:p[1], progress:0 });
+  }
+  drawUpload();
+  upList.forEach(f => { if (f.progress < 100) stepBar(f); });
+}
+function stepBar(f){
+  setTimeout(() => {
+    f.progress = Math.min(100, f.progress + 12 + Math.floor(Math.random()*16));
+    drawUpload();
+    if (f.progress < 100) stepBar(f);
+  }, 90);
+}
+function drawUpload(){
+  const b = $('#upBody');
+  if (!b) return;
+  b.innerHTML = upList.length ? upList.map(f =>
+      '<tr><td>'+esc(f.name)+'</td><td>'+sizeText(f.size)+'</td>'
+      + '<td><span class="prog"><i style="width:'+f.progress+'%"></i></span>'
+      + (f.progress >= 100 ? '<span class="pdone">✓</span>' : '')+'</td></tr>').join('')
+    : '<tr class="fempty"><td colspan="3">尚未选择文件</td></tr>';
+}
+function commitUpload(){
+  const done = upList.filter(f => f.progress >= 100), lost = upList.length - done.length;
+  const tg = upTarget;
+  const selEl = $('#upCatSel');
+  const cat = selEl ? selEl.value : (tg ? (tg.cat != null ? tg.cat : (tg.cats ? newCat() : '')) : '');
+  upList = [];
+  if (done.length && tg){
+    done.forEach(f => tg.list.push({ name:f.name, size:f.size, uploader:UPLOADER, time:nowStamp(), cat:cat }));
+    if (tg.onDone) tg.onDone();
+  }
+  if (lost) toast(lost + ' 个文件未完成上传，已取消');
+  else if (done.length) toast('已上传 ' + done.length + ' 个附件' + (cat ? '，已归入分类：' + cat : ''));
+  upTarget = null;
+}
+const OTHER_LAST_AVG = 80;                /* 上月平均价值：原型暂按 80 元自动带入 */
+function syncOtherWorkValue(){            /* 其他工作价值 = 上月平均价值 × 耗时，只读自动计算 */
+  if (form.typeKey !== 'QT') return null;
+  if (form.data._workAuto === false) return null;
+  if (form.data.lastAvgValue == null || form.data.lastAvgValue === '') form.data.lastAvgValue = OTHER_LAST_AVG;
+  const avg = numOf(form.data.lastAvgValue), hours = numOf(form.data.hours);
+  const value = Math.round(avg * hours * 100) / 100;
+  form.data.otherWorkValue = value;
+  const avgInp = $('#dynFields [data-k="lastAvgValue"]');
+  if (avgInp) avgInp.value = avg.toFixed(2);
+  const valInp = $('#dynFields [data-k="otherWorkValue"]');
+  if (valInp) valInp.value = value.toFixed(2);
+  return value;
+}
+function autoSumOf(){                     /* 明细列 → 基本信息字段联动，如 项目过程咨询的报审金额 */
+  const t = typeOf(form.typeKey);
+  if (!t || !t.autoAmount || !t.detail) return null;
+  const v = (form.detail||[]).reduce((a,r) => a + (Number(r[t.autoAmount])||0), 0);
+  if (form.data._amountAuto === false) return v;
+  form.data.amount = v;
+  const inp = $('#dynFields [data-k="amount"]');
+  if (inp) inp.value = v.toFixed(2);
+  return v;
+}
+function renderSummary(){
+  autoSumOf();
+  const t = typeOf(form.typeKey), z = $('#sumZone');
+  if (!t || !t.summary || !t.summary.length){ z.innerHTML = ''; return; }
+  const sum = sumOf({ typeKey: form.typeKey, detail: form.detail });
+  z.innerHTML = '<div class="sums">' + t.summary.map(s =>
+    '<div class="it">'+s.label+'<b class="'+(s.red?'red':'')+'">'+money(sum[s.k])
+    + ' <span style="font-size:12px;color:#606266;font-weight:400">'+s.unit+'</span></b></div>').join('') + '</div>';
+}
+function cellHtml(c, i, r, grid){
+  const v = r[c.k] == null ? '' : r[c.k];
+  if (c.type === 'select'){
+    return '<td><select data-grid="'+grid+'" data-di="'+i+'" data-dk="'+c.k+'">'+optDict(c.dict, v)+'</select></td>';
+  }
+  const ph = c.type === 'person' ? '点击选择人员' : (c.type === 'num' ? '0.00' : '请输入');
+  return '<td class="'+(c.calc?'calc':'')+'"><input data-grid="'+grid+'" data-di="'+i+'" data-dk="'+c.k+'" value="'+esc(v)+'" placeholder="'+ph+'"></td>';
+}
+function cellText(c, r){
+  const v = r[c.k];
+  if (v == null || v === '') return '';
+  return (c.type === 'num') ? money(v) : esc(v);
+}
+function renderDetail(){
+  const t = typeOf(form.typeKey), z = $('#detailZone');
+  if (!t){ z.innerHTML = ''; return; }
+  const sh = $('#subhdDetail'); if (sh) sh.style.display = (!t || t.detail) ? '' : 'none';
+  if (!t.detail){ z.innerHTML = ''; return; }
+  const cols = t.detail.cols, RO = ro('effect');
+  z.innerHTML = gridHtml('detail', cols, form.detail, RO, '暂无明细，点击“添加明细”');
+}
+/* ============ 内控核验 ============ */
+function innerData(){ return form.inner || (form.inner = { data:{}, detail:[], files:[] }); }
+function innerFiles(){ const d = innerData(); return d.files || (d.files = []); }
+function innerFieldHtml(f, span, RO){
+  const cls = 'frow gs'+(span||2), d = innerData().data;
+  const v = d[f.k] == null ? '' : d[f.k];
+  const lb = '<label>'+f.label+((f.type==='money'||f.unit)?'（元）':'')+'</label>';
+  if (f.type === 'select')
+    return '<div class="'+cls+'">'+lb+'<div class="fctl"><select class="ctl" data-ik="'+f.k+'"'+(RO?' disabled':'')+'>'+optDict(f.dict, v)+'</select></div></div>';
+  if (f.type === 'textarea')
+    return '<div class="'+cls+'" style="align-items:flex-start">'+lb
+      + '<div class="fctl"><textarea class="ctl'+(RO?' ro':'')+'" data-ik="'+f.k+'" placeholder="请输入"'+(RO?' readonly':'')+'>'+esc(v)+'</textarea></div></div>';
+  return '<div class="'+cls+'">'+lb+'<div class="fctl"><input class="ctl'+(RO?' ro':'')+'" data-ik="'+f.k+'" value="'+esc(v)+'" placeholder="请输入"'+(RO?' readonly':'')+'></div></div>';
+}
+function innerDetailHtml(cfg, RO){
+  const d = innerData(), rows = d.detail || (d.detail = []);
+  const controlLabel = form.typeKey === 'ZC' ? '核减金额' : '控制金额';
+  const amountTitle = form.typeKey === 'ZC' ? '风险敞口金额与核减金额' : '风险敞口金额与控制金额';
+  const personCell = (r,i) => '<td rowspan="2" class="riskmerged">'
+    + (RO ? (esc(r.person||'') || '—')
+          : '<input data-grid="risk" data-di="'+i+'" data-dk="person" value="'+esc(r.person||'')+'" placeholder="请输入">')
+    + '</td>';
+  const riskCell = (r,i) => '<td rowspan="2" class="riskitemcell">'
+    + (RO ? '<div style="white-space:pre-wrap;color:#303133">'+(esc(r.riskItem||'') || '—')+'</div>'
+          : '<textarea data-grid="risk" data-di="'+i+'" data-dk="riskItem" placeholder="请输入">'+esc(r.riskItem||'')+'</textarea>')
+    + '</td>';
+  const amountCells = (r,i,k,label) => '<td class="riskamtlabel">'+label+'（元）</td>'
+    + '<td class="riskamtvalue">'
+    + (RO ? (r[k] == null || r[k] === '' ? '' : '<span style="padding:0 10px">'+money(r[k])+'</span>')
+          : '<input data-grid="risk" data-di="'+i+'" data-dk="'+k+'" value="'+esc(r[k]==null?'':r[k])+'" placeholder="请输入">')
+    + '</td>';
+  const indexCells = (i) => (RO ? '' : '<td rowspan="2" class="ck"><input type="checkbox" data-ck="'+i+'" data-grid="risk"></td>')
+    + '<td rowspan="2" style="text-align:center;color:#909399">'+(i+1)+'</td>';
+  return '<div class="subhd">风险成效明细</div>'
+    + gridHtml('risk', [], rows, RO, {
+        tableClass:'riskdetail', colspan:(RO ? 5 : 6),
+        colgroup:'<colgroup>'+(RO ? '' : '<col class="c-ck">')+'<col class="c-seq"><col class="c-person"><col><col class="c-amount-l"><col class="c-amount-v"></colgroup>',
+        headerHtml:(RO ? '' : '<th class="ck"><input type="checkbox" data-ckall="risk"></th>')
+          + '<th style="width:48px">序号</th><th>相关人员</th><th>风险事项</th><th colspan="2">'+amountTitle+'</th>',
+        emptyText:'暂无明细，点击“添加明细”',
+        renderRows:() => rows.map((r,i) => '<tr class="riskstart">'
+          + indexCells(i) + personCell(r,i) + riskCell(r,i) + amountCells(r,i,'exposure','风险敞口金额') + '</tr>'
+          + '<tr>' + amountCells(r,i,'control',controlLabel) + '</tr>').join('')
+      });
+}
+function innerAttachHtml(cfg, RO){
+  const cats = cfg.attachCats || [], files = innerFiles();
+  return '<div class="subhd" style="margin-top:18px">附件</div>'
+    + '<div class="upbar"><span class="ulb">相关附件</span>'
+      + (RO ? '' : '<span class="updd"><button class="btn navy sm" id="innerUp">'+ICON_UP+'上传附件'
+          + (cats.length ? '<span class="cv2">⌄</span>' : '') + '</button><div class="upmenu" id="innerMenu">'
+          + cats.map(c => '<button type="button" data-icat="'+esc(c)+'">'+esc(c)+'</button>').join('') + '</div></span>')
+      + '</div>'
+    + '<div class="tablewrap"><table class="ft"><thead><tr><th>文件名</th>'
+      + (cats.length ? '<th style="width:150px">附件分类</th>' : '')
+      + '<th style="width:110px">上传人</th><th style="width:110px">文件大小</th><th style="width:170px">上传时间</th>'
+      + '<th style="width:96px;text-align:center">操作</th>' + '</tr></thead><tbody>'
+      + (files.length ? files.map((f,i) => '<tr><td>'+esc(f.name)+'</td>'
+          + (cats.length ? '<td>'+esc(f.cat||'—')+'</td>' : '')
+          + '<td>'+(f.uploader||'—')+'</td><td>'+sizeText(f.size)+'</td><td>'+(f.time||'—')+'</td>'
+          + '<td class="op"><button class="lnk" data-ifdl="'+i+'">下载</button>'+(RO ? '' : '<button class="lnk" data-ifdel="'+i+'">删除</button>')+'</td></tr>').join('')
+        : '<tr class="fempty"><td colspan="'+(5+(cats.length?1:0))+'">'
+          + (RO ? '暂无附件' : '暂无附件，点击「上传附件」选择文件（可多选）') + '</td></tr>')
+      + '</tbody></table></div>';
+}
+function renderInner(){
+  const t = typeOf(form.typeKey), z = $('#innerZone'), wrap = $('#innerWrap');
+  if (!z || !wrap) return;
+  const cfg = t && t.inner, show = !!(cfg && stageOf(form.status).showIn);
+  wrap.style.display = show ? '' : 'none';
+  if (!show){ z.innerHTML = ''; return; }
+  const RO = ro('inner');
+  const longLb = cfg.fields ? cfg.fields.some(f => String(f.label||'').length >= 8) : false;
+  z.classList.toggle('wlab', longLb);
+  let h = '';
+  if (cfg.mode === 'fields'){
+    const laid = cfg.laid || (cfg.laid = layoutFields({ fields:cfg.fields }));
+    h += '<div class="grid3">' + laid.map(x => innerFieldHtml(x.f, x.s, RO)).join('') + '</div>';
+  } else h += innerDetailHtml(cfg, RO);
+  h += innerAttachHtml(cfg, RO);
+  z.innerHTML = h;
+}
+function switchPane(name){
+  if (name === 'change'){
+    const cur = form ? form.id : selId;
+    if (chg.id !== cur){
+      chg = { id:cur, items:[], draft:null, mode:'view', idx:0 };
+      renderChange();
+    }
+  }
+  $$('#detailTabs .t2').forEach(b => b.classList.toggle('on', b.dataset.pane === name));
+  $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + name));
+}
+</script><script>
+/* ============ 项目变更（变更信息 + 变更记录） ============ */
+const CHG_GROUP = { name:'基础信息', subType:'基础信息', owner:'人员信息', members:'人员信息', amount:'金额信息' };
+let chg = { id:null, items:[], draft:null, mode:'view', idx:0 };
+function openChange(id){
+  const p = projects.find(x => x.id === id);
+  chg = { id:id, items:[], draft:null, mode:'view', idx:0 };
+  editing = false;
+  loadForm(p);            /* 详情区同步展示该项目信息 */
+  selId = id;
+  renderForm();           /* 项目信息页签、当前项目与状态一并刷新，避免残留上一个项目 */
+  renderList();
+  renderChange();
+  switchPane('change');
+  scrollToDetail();
+  toast('已进入【项目变更】，可变更：' + changeFieldsOf(typeOf(p.typeKey)).map(f => f.label).join(' / '));
+}
+function chgItemsOf(p){
+  const cf = changeFieldsOf(typeOf(p.typeKey));
+  const before = k => k === 'members' ? ((p.members||[]).join('、') || '—')
+                     : k === 'amount' ? money(p.amount) : (p[k] || '—');
+  return cf.map(f => ({ k:f.k, label:f.label, group:CHG_GROUP[f.k] || '基础信息', before:before(f.k), after:'' }));
+}
+function renderChgInfo(p){
+  const list = (p.changes||[]).slice().reverse();
+  $('#chgInfoBody').innerHTML = list.length ? list.map((c,i) =>
+      '<tr data-ci="'+i+'"'+(chg.mode === 'view' && chg.idx === i ? ' class="selrow"' : '')+'>'
+    + '<td style="text-align:center">'+(i+1)+'</td>'
+    + '<td><span class="st '+(c.state === '审批中' ? 'pending' : (c.state === '已驳回' ? 'reject' : 'done'))+'">'+esc(c.state)+'</span></td>'
+    + '<td>'+esc(c.by)+'</td><td>'+esc(c.time)+'</td></tr>').join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:22px;color:#909399">暂无变更信息</td></tr>';
+  $('#chgPager').innerHTML = '<span>共 '+list.length+' 条</span>'
+    + '<select class="ctl" style="width:96px;height:30px"><option>5条/页</option></select>'
+    + '<button class="pgbtn">‹</button><button class="pgbtn on">1</button><button class="pgbtn">›</button>'
+    + '<span>前往</span><input class="ctl" style="width:56px;height:30px;text-align:center" value="1"><span>页</span>';
+}
+function chgAfterCtl(x, open){
+  if (!open) return '<span class="rotext">'+(x.after ? esc(x.after) : '—')+'</span>';
+  if (x.k === 'owner')
+    return '<select data-caf="'+x.k+'"><option value=""></option>'
+      + PEOPLE.map(n => '<option'+(n === x.after ? ' selected' : '')+'>'+n+'</option>').join('')+'</select>';
+  if (x.k === 'members')
+    return pickBox('chgMembers', true, false);   /* 多人：点选人名即可，无需手输分隔符 */
+  const ph = x.k === 'amount' ? '0.00' : '请输入';
+  return '<input data-caf="'+x.k+'" value="'+esc(x.after)+'" placeholder="'+ph+'">';
+}
+function chgViewRec(p){
+  if (!p || chg.mode !== 'view') return null;
+  return (p.changes||[]).slice().reverse()[chg.idx] || null;
+}
+function renderChgRec(p){
+  const z = $('#chgRecBody'); if (!z) return;
+  const rec = chgViewRec(p), open = !!(p && chgOpen(p) && chg.mode === 'new');
+  const bs = $('#chgSave'), bt = $('#chgSubmit');
+  if (bs) bs.style.display = open ? '' : 'none';
+  if (bt) bt.style.display = open ? '' : 'none';
+  const tag = $('#chgRecTag');
+  if (tag) tag.innerHTML = rec
+    ? '查看第 '+(chg.idx+1)+' 条变更申请（'+esc(rec.state)+' · '+esc(rec.time)+' · '+esc(rec.by)+'），仅供查看'
+    : (open ? '新建变更单（未提交，可编辑）' : '');
+  const it = (rec ? (rec.items||[]).map(x => ({ k:x.k, label:x.label, group:CHG_GROUP[x.k] || '基础信息', before:x.from, after:x.to }))
+                 : (chg.items || [])).filter(x => x && x.label !== undefined);
+  if (!it.length){
+    z.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:22px;color:#909399">'
+      + (rec ? '该变更申请无变更项'
+             : (open ? '请点击「变更信息」右侧的「＋ 增加变更」新建变更单'
+                     : (p ? '暂无变更记录；如需发起变更，请点击「＋ 增加变更」'
+                          : '未选择项目'))) + '</td></tr>';
+    return;
+  }
+  let html = '', i = 0;
+  while (i < it.length){
+    let j = i; while (j+1 < it.length && it[j+1].group === it[i].group) j++;
+    const span = j - i + 1;
+    for (let k = i; k <= j; k++){
+      html += '<tr><td style="text-align:center">'+(k+1)+'</td>';
+      if (k === i) html += '<td rowspan="'+span+'" style="text-align:center;color:#606266">'+esc(it[i].group)+'</td>';
+      html += '<td style="color:#303133">'+esc(it[k].label)+'</td>'
+        + '<td><input class="ro" readonly value="'+esc(it[k].before)+'"></td>'
+        + '<td>'+chgAfterCtl(it[k], open)+'</td>'
+        + '<td class="op">'+(open ? '<button class="lnk" data-cdel="'+k+'">删除</button>' : '<span class="hint">—</span>')+'</td>'
+        + '</tr>';
+    }
+    i = j + 1;
+  }
+  z.innerHTML = html;
+}
+function renderChange(){
+  const p = projects.find(x => x.id === chg.id);
+  if (!p){
+    $('#chgInfoBody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:22px;color:#909399">未选择项目</td></tr>';
+    $('#chgPager').innerHTML = '<span>共 0 条</span>';
+    chg.items = []; chg.draft = null; chg.mode = 'view'; chg.idx = 0;
+    renderChgRec(null);
+    const t0 = $('#chgRecTag'); if (t0) t0.textContent = '';
+    return;
+  }
+  const list = (p.changes||[]).slice().reverse();
+  if (chg.mode === 'new' && !chgOpen(p)){
+    if (chg.items.length) chg.draft = chg.items.slice();
+    chg.items = []; chg.mode = 'view';
+  }
+  if (chg.mode === 'view' && chg.idx >= list.length) chg.idx = 0;
+  if (chg.mode === 'view') chg.items = [];
+  renderChgInfo(p); renderChgRec(p);
+}
+function chgAdd(){
+  const p = projects.find(x => x.id === chg.id);
+  if (!p) return toast('请先在项目列表点击一个项目');
+  if (!chgOpen(p)) return toast('仅「正在执行」项目可发起变更（项目关闭后不可变更）');
+  const again = !!(chg.draft && chg.draft.length);
+  chg.mode = 'new'; chg.idx = 0;
+  chg.items = again ? chg.draft.slice() : chgItemsOf(p);
+  renderChange();
+  toast(again ? '已恢复未提交的变更单草稿'
+              : '已新建变更单：请在「变更记录」填写变更后内容后点击「提交」');
+}
+/* 点击「变更信息」单行：在「变更记录」展示该次变更的对照内容（只读） */
+function chgSelectRec(i){
+  const p = projects.find(x => x.id === chg.id); if (!p) return;
+  const list = (p.changes||[]).slice().reverse();
+  if (!list[i]) return;
+  if (chg.items && chg.items.length) chg.draft = chg.items.slice();
+  chg.items = []; chg.mode = 'view'; chg.idx = i;
+  renderChange();
+  toast('已在「变更记录」展示第 '+(i+1)+' 条变更申请（'+list[i].state+'）');
+}
+function chgSave(){
+  if (chg.mode !== 'new' || !chg.items.length) return toast('请先点击「＋ 增加变更」新建变更单');
+  toast('变更记录已暂存（未提交）');
+}
+function chgHistoryHtml(p){
+  const list = (p.changes||[]).slice().reverse();
+  return list.length ? list.map(c => '<div class="ti"><div class="th">变更申请 · '+c.state+'</div>'
+      + '<div class="td">申请人：'+c.by+' · '+c.time+'</div>'
+      + '<div class="tc">'+c.items.map(i=>i.label+'：<span class="bf">'+i.from+'</span> → <b>'+i.to+'</b>').join('；')+'</div></div>').join('')
+    : '<div class="hint">暂无变更记录</div>';
+}
+
+/* ============ 弹窗 ============ */
+function openModal(title, body, foot, opts){
+  const md = $('.modal'); if (md) md.classList.toggle('wide', !!(opts && opts.wide));
+  $('#mTitle').textContent = title;
+  $('#mBody').innerHTML = body;
+  $('#mFoot').innerHTML = '';
+  (foot||[]).forEach(b => {
+    const el = document.createElement('button');
+    el.className = 'btn ' + (b.cls||'');
+    el.textContent = b.label;
+    el.onclick = () => { closeModal(); b.onClick && b.onClick(); };
+    $('#mFoot').appendChild(el);
+  });
+  $('#mask').classList.add('on');
+}
+function closeModal(){
+  $('#mask').classList.remove('on');
+  const f = onModalClose; onModalClose = null; if (f) f();
+}
+</script><script>
+/* ============ 表单：加载 / 保存 / 提交 ============ */
+function scrollToDetail(){
+  const el = $('#detailTabs');
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function loadForm(p){
+  form = p
+    ? { id:p.id, typeKey:p.typeKey, status:p.status,
+        data:Object.assign({}, p.fields, { code:p.code, name:p.name, subType:p.subType, month:p.month, month2:p.month,
+             owner:p.owner, members:(p.members||[]).join(','), amount:p.amount }),
+        detail:(p.detail||[]).map(r => Object.assign({}, r)),
+        files:(p.files||[]).map(f => Object.assign({}, f)),
+        inner: JSON.parse(JSON.stringify(p.inner || { data:{}, detail:[], files:[] })) }
+    : { id:null, typeKey:'', status:'none', data:{ month:'2026-10' }, detail:[], files:[], inner:{ data:{}, detail:[], files:[] } };
+  if (form.data.bids) form.data.bids = form.data.bids.map(r => Object.assign({}, r));
+}
+function openForm(id, presetType, edit){
+  const p = id ? projects.find(x => x.id === id) : null;
+  loadForm(p);
+  if (!p && presetType) form.typeKey = presetType;
+  editing = !p || !!edit;             /* 新建默认可编辑；已有项目默认只读 */
+  chg = { id: p ? p.id : null, items:[], draft:null, mode:'view', idx:0 };   /* 项目变更页签跟随当前选中的项目 */
+  renderForm(); renderChange(); switchPane('info'); scrollToDetail();
+  if (!p && !presetType) toast('请先选择【项目类型】，系统按类型切换字段、附件与明细');
+}
+function collectForm(){
+  $$('[data-k]').forEach(el => { if (!el.closest('#chgFields')) form.data[el.dataset.k] = el.value; });
+  $$('[data-grid][data-dk]').forEach(el => {
+    const rows = gridRows(el.dataset.grid);
+    const i = Number(el.dataset.di), k = el.dataset.dk;
+    if (rows[i]) rows[i][k] = el.value;
+  });
+  if (form.inner){
+    $$('#innerZone [data-ik]').forEach(el => { form.inner.data[el.dataset.ik] = el.value; });
+  }
+}
+function validate(){
+  const t = typeOf(form.typeKey);
+  if (!t) return '请先选择【项目类型】';
+  if (!stageOf(form.status).basic && form.id) return '';    /* 非草稿阶段：基本信息只读，不再校验 */
+  const miss = [];
+  t.fields.forEach(f => { if (f.req && f.type !== 'driver' && f.type !== 'ro' && !String(form.data[f.k]||'').trim()) miss.push(f.label); });
+  if (miss.length) return '请填写必填项：' + miss.slice(0,4).join('、') + (miss.length>4 ? ' 等' : '');
+  return '';
+}
+function persist(){
+  const t = typeOf(form.typeKey);
+  const members = String(form.data.members||'').split(',').filter(Boolean);
+  const data = { typeKey:form.typeKey, name:form.data.name, subType:form.data.subType,
+    month:form.data.month || form.data.month2 || '', owner:form.data.owner, members:members,
+    amount:numOf(form.data.amount) };
+  const fdata = Object.assign({}, form.data);
+  if (fdata.bids) fdata.bids = fdata.bids.map(r => Object.assign({}, r));
+  const innerData = JSON.parse(JSON.stringify(form.inner || { data:{}, detail:[], files:[] }));
+  if (form.id){
+    const p = projects.find(x => x.id === form.id);
+    Object.assign(p, data);
+    p.fields = fdata;
+    p.detail = form.detail.map(r => Object.assign({}, r));
+    p.files = (form.files||[]).map(f => Object.assign({}, f));
+    p.inner = innerData;
+  } else {
+    const code = form.data.code || newCode(t.prefix);
+    form.data.code = code;
+    const p = Object.assign({ id:SEQ++, code:code, status:'draft', approver:'—', changes:[], innerDone:false,
+      fields:fdata, detail:form.detail.map(r => Object.assign({}, r)),
+      files:(form.files||[]).map(f => Object.assign({}, f)), inner:innerData }, data);
+    form.id = p.id; projects.unshift(p);
+  }
+  const inp = $('#dynFields .ctl.ro'); if (inp) inp.value = form.data.code;
+}
+function saveForm(next){
+  collectForm();
+  const err = validate(); if (err){ toast(err); return false; }
+  persist();
+  const p = projects.find(x => x.id === form.id);
+  if (next) form.status = next;
+  else if (!form.status || form.status === 'none') form.status = 'draft';
+  if (p && p.status !== form.status) p.status = form.status;
+  editing = false;                    /* 保存后回到只读：「保存」隐藏、「编辑」重新出现 */
+  renderForm(); renderList();
+  return true;
+}
+function doSave(){
+  const s = form.status;
+  if (s === 'running'){ if (saveForm()) toast((effDone() ? '风险成效审批' : effName()) + '已保存，可继续编辑或点击「保存并提交」'); return; }
+  if (saveForm()) toast('已保存（草稿），可点击「编辑」继续修改，或点击「保存并提交」');
+}
+const TIP_TXT = '您可在下方备注栏中填写本次提交内容的说明。<br>'
+  + '当确认提交信息后，将进入审批流程，相关审核人员可查看备注内的信息。';
+/* 提示弹窗（提交类确认）：图标提示 + 可选补充内容 + 备注 + 审批人提示 */
+function tipBody(noteId, approvers, subTxt, extra){
+  return '<div class="msub"><span class="wico">!</span><div>' + (subTxt || TIP_TXT) + '</div></div>'
+    + (extra || '')
+    + '<div class="frow"><label>备注</label><div class="fctl">'
+    + '<textarea class="ctl" id="' + noteId + '" placeholder="请输入"></textarea></div></div>'
+    + '<div class="mtip">即将开始审批，审批人 ' + approvers.join('、') + '。</div>';
+}
+function tipNote(id){ const el = $('#' + id); return el ? el.value : ''; }
+function doSubmit(){
+  const s = form.status;
+  if (!form.id || s === 'draft' || s === 'none'){
+    if (!saveForm()) return;
+    const p = projects.find(x => x.id === form.id);
+    if (p) startProject(p);
+    return;
+  }
+  if (s !== 'running') return;
+  const d = effDone();
+  collectForm();
+  const err = validate(); if (err) return toast(err);
+  if (!d){
+    return openModal('提示', tipBody('effNote', APPROVERS_EFF),
+      [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+        const p = projects.find(x => x.id === form.id); if (p) p.effNote = tipNote('effNote');
+        if (!saveForm('running')) return;
+        const q = projects.find(x => x.id === form.id); if (q) q.effectDone = true;
+        renderForm(); renderList(); toast(effName() + '已提交，提交即视为审批通过');
+      }}]);
+  }
+  if (innerDone()) return toast('风险成效审批已提交，不可再次录入');
+  return openModal('提示', tipBody('innerNote', APPROVERS_INNER, TIP_TXT),
+    [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+      const p = projects.find(x => x.id === form.id); if (p) p.innerNote = tipNote('innerNote');
+      if (!saveForm('running')) return;
+      const q = projects.find(x => x.id === form.id); if (q) q.innerDone = true;
+      renderForm(); renderList(); toast('风险成效审批已提交，提交即视为审批通过');
+    }}]);
+}
+function selectRow(id, edit){
+  const p = projects.find(x => x.id === id); if (!p) return;
+  selId = id;
+  openForm(p.id, null, edit);  /* 载入该项目信息并滚动到详情区（edit=true 直接进入编辑态） */
+  renderList();
+}
+/* 各提交环节审批人（原型示例）：按项目类型 / 环节配置；审批通过、驳回动作不在原型中体现（提交即视为通过） */
+const APPROVERS_START = ['赵婷婷 zhaott', '郑宏 zhengh'];
+const APPROVERS_EFF   = ['鹿智慧 luzh', '周楠 zhoun'];
+const APPROVERS_INNER = ['李进 lij', '侯名伟 hmw'];
+const APPROVERS_CHG   = ['赵婷婷 zhaott', '鹿智慧 luzh'];
+const APPROVERS_CLOSE = ['郑宏 zhengh', '林福娇 lfj'];
+function startProject(p){
+  openModal('提示', tipBody('startNote', APPROVERS_START),
+    [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+      p.startNote = tipNote('startNote');
+      p.status = 'running';
+      if (form.id === p.id){ form.status = 'running'; editing = false; renderForm(); }
+      renderList(); toast('已提交：'+p.name+' 进入正在执行');
+    }}]);
+}
+function enterEffect(p){
+  selectRow(p.id, true);
+  const el = $('#effWrap');
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  toast('已进入编辑状态：在【' + effName() + '】录入附件与明细，完成后点击「保存」或「保存并提交」');
+}
+function enterInner(p){
+  selectRow(p.id, true);
+  const el = $('#innerWrap');
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  toast('已进入编辑状态：编辑【风险成效审批】后点击「保存」或「保存并提交」');
+}
+function askClose(p){
+  openModal('提示', tipBody('closeNote', APPROVERS_CLOSE,
+      '您可在下方备注栏中填写本次关闭说明。<br>确认关闭后项目信息不可再编辑、不可再发起变更；如需继续处理，可在项目列表点击「取消关闭」。'),
+    [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+      p.closeNote = tipNote('closeNote');
+      p.status = 'closed';
+      if (form.id === p.id){ form.status = 'closed'; editing = false; renderForm(); }
+      renderList(); toast('项目已关闭：'+p.name);
+    }}]);
+}
+function reopenProject(p){
+  openModal('提示', tipBody('reopenNote', APPROVERS_CLOSE,
+      '您可在下方备注栏中填写本次取消关闭说明。<br>确认后【'+esc(p.name)+'】恢复为「正在执行」，可继续录入成效信息与内控核验。'),
+    [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+      p.reopenNote = tipNote('reopenNote');
+      p.status = 'running';
+      if (form.id === p.id){ form.status = 'running'; editing = false; renderForm(); }
+      renderList(); toast('已取消关闭：'+p.name+' 恢复为正在执行');
+    }}]);
+}
+function submitChange(){
+  const p = projects.find(x => x.id === chg.id);
+  if (!p) return toast('请先在项目列表点击一个项目');
+  if (!chgOpen(p)) return toast('仅「正在执行」项目可提交变更（项目关闭后不可变更）');
+  if (!chg.items.length) return toast('请先点击「＋ 增加变更」新建变更单');
+  const changed = chg.items.filter(x => String(x.after||'').trim() && String(x.after).trim() !== String(x.before));
+  if (!changed.length) return toast('「变更后」与「变更前」一致，请修改后再提交');
+  const items = changed.map(x => ({ k:x.k, label:x.label, from:x.before,
+    to: x.k === 'members' ? String(x.after).replace(/[,，]/g, '、').trim()
+      : (x.k === 'amount' ? money(numOf(x.after)) : String(x.after).trim()) }));
+  const extra = '<div class="kv" style="margin-bottom:10px"><div class="k">项目名称</div><div>'+esc(p.name)+'</div>'
+    + '<div class="k">项目类型</div><div>'+typeOf(p.typeKey).name+'</div>'
+    + '<div class="k">变更项</div><div>共 '+items.length+' 项</div></div>'
+    + items.map(i => '<div class="flowline"><span class="nm">'+esc(i.label)+'</span><span class="hint">'+esc(i.from)+' → <b style="color:#11538E">'+esc(i.to)+'</b></span></div>').join('');
+  openModal('提示', tipBody('chgNote', APPROVERS_CHG, null, extra),
+    [{label:'取消'},{label:'确认',cls:'navy',onClick:()=>{
+      const note = tipNote('chgNote');
+      items.forEach(i => {
+        if (i.k === 'members') p.members = String(i.to).split('、').filter(n => n && n !== '—');
+        else if (i.k === 'amount') p.amount = numOf(i.to);
+        else p[i.k] = i.to;
+      });
+      if (p.fields) p.fields.name = p.name;
+      p.changes = p.changes || [];
+      p.changes.push({ time:'2026-10-16 15:20', by:'林福娇', items:items, state:'已通过', note:note, files:[] });
+      chg.items = []; chg.draft = null; chg.mode = 'view'; chg.idx = 0;
+      renderList(); loadForm(p); renderForm(); renderChange();
+      switchPane('change');
+      toast('变更已提交并生效');
+    }}]);
+}
+</script><script>
+/* ============ 事件绑定 ============ */
+function bindAll(){
+  /* 列表：页签 / 精准搜索 / 模糊搜索 */
+  $('#tabs').onclick = e => {
+    const b = e.target.closest('[data-tab]'); if (!b) return;
+    listTab = b.dataset.tab; renderList();
+  };
+  $('#fField').onchange = () => { const el = $('#fFieldKw'); if (el) el.focus(); renderList(); };
+  $('#fFieldKw').oninput = renderList;
+  $('#fKw').oninput = renderList;
+  $('#btnNew').onclick = () => openForm(null);
+  $('#ckAllList').onclick = e => $$('#listBody [data-rowck]').forEach(c => c.checked = e.target.checked);
+
+  /* 列表：点击行 = 选中并展示该项目信息；点击操作按钮 = 执行操作 */
+  $('#listBody').onclick = e => {
+    const btn = e.target.closest('[data-op]');
+    if (!btn){
+      if (e.target.closest('input,label')) return;     /* 复选框列不触发行选中 */
+      const tr = e.target.closest('tr[data-rowid]');
+      if (tr) selectRow(Number(tr.dataset.rowid));
+      return;
+    }
+    const p = projects.find(x => x.id === Number(btn.dataset.id)); if (!p) return;
+    const op = btn.dataset.op;
+    if (op === 'view')   return selectRow(p.id);
+    if (op === 'edit')   return selectRow(p.id, true);
+    if (op === 'effect') return enterEffect(p);
+    if (op === 'inner')  return enterInner(p);
+    if (op === 'close')  return askClose(p);
+    if (op === 'reopen') return reopenProject(p);
+    if (op === 'change'){ selId = p.id; renderList(); return openChange(p.id); }
+    if (op === 'chghis') return openModal('变更记录 · '+p.name, chgHistoryHtml(p), [{label:'关闭'}]);
+    if (op === 'del') return openModal('删除确认', '确认删除草稿【'+p.name+'】？删除后不可恢复。',
+      [{label:'取消'},{label:'确认删除',cls:'navy',onClick:()=>{ projects.splice(projects.indexOf(p),1); renderList(); toast('已删除'); }}]);
+  };
+
+  /* 详情：页签 / 保存 / 提交 */
+  $$('#detailTabs .t2').forEach(b => b.onclick = () => switchPane(b.dataset.pane));
+  $('#btnEdit').onclick = startEdit;
+  $('#btnSave').onclick = doSave;
+  $('#btnSubmit').onclick = doSubmit;
+
+  /* 章节折叠 */
+  $$('.sect[data-sec]').forEach(s => s.onclick = e => {
+    if (e.target.closest('button')) return;      /* 章节标题内的按钮不触发折叠 */
+    s.classList.toggle('closed');
+    const box = s.nextElementSibling;
+    if (box && box.classList.contains('sectbox')) box.classList.toggle('hide');
+  });
+
+  /* 项目信息：类型切换与字段输入 */
+  $('#dynFields').addEventListener('change', e => {
+    if (e.target.id !== 'typeSel') return;
+    collectForm();
+    const old = form.typeKey;
+    form.typeKey = e.target.value;
+    if (form.typeKey && old !== form.typeKey){
+      const t = typeOf(form.typeKey);
+      if (!form.id) form.data.code = newCode(t.prefix);
+      if (!form.data.month) form.data.month = '2026-10';
+      if (t.detail && !form.detail.length) form.detail = [{}];
+      toast('已切换为【'+t.name+'】');
+    }
+    renderForm(); renderChange();
+  });
+  $('#dynFields').addEventListener('input', e => {
+    const ds = e.target.dataset || {};
+    if (ds.k != null){
+      form.data[ds.k] = e.target.value;
+      const t = typeOf(form.typeKey);
+      if (t && t.autoAmount === ds.k) form.data._amountAuto = false;
+      if (form.typeKey === 'QT' && ds.k === 'otherWorkValue') form.data._workAuto = false;
+      if (form.typeKey === 'QT' && (ds.k === 'hours' || ds.k === 'lastAvgValue')){ form.data._workAuto = true; syncOtherWorkValue(); }
+      if (e.target.tagName === 'TEXTAREA'){
+        const h = e.target.parentNode && e.target.parentNode.querySelector('.taCount');
+        if (h) h.textContent = String(e.target.value||'').length + ' / ' + (e.target.getAttribute('maxlength')||5000);
+      }
+    }
+  });
+
+  /* 可编辑表格：业务成效明细与清标投标单位共用编辑、勾选和工具栏逻辑 */
+  const gridEdit = e => {
+    const ds = e.target.dataset || {};
+    if (!ds.grid || ds.dk == null) return;
+    const rows = gridRows(ds.grid), i = Number(ds.di);
+    if (!rows[i]) rows[i] = {};
+    rows[i][ds.dk] = e.target.value;
+    if (ds.grid === 'detail'){
+      const t = typeOf(form.typeKey);
+      if (t && t.autoAmount) form.data._amountAuto = true;
+      renderSummary();
+    }
+  };
+  ['input','change'].forEach(ev => {
+    $('#dynFields').addEventListener(ev, gridEdit);
+    $('#detailZone').addEventListener(ev, gridEdit);
+    $('#innerZone').addEventListener(ev, gridEdit);
+  });
+  document.addEventListener('change', e => {
+    const all = e.target.closest('[data-ckall]'); if (!all) return;
+    $$('#'+gridBodyId(all.dataset.ckall)+' [data-ck]').forEach(c => c.checked = all.checked);
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-tbtn]'); if (!b) return;
+    const tb = b.closest('[data-grid]'); if (!tb) return;
+    const grid = tb.dataset.grid, rows = gridRows(grid);
+    const ck = $$('#'+gridBodyId(grid)+' [data-ck]').filter(c => c.checked).map(c => Number(c.dataset.ck));
+    const idx = ck.length ? ck : (rows.length ? [rows.length-1] : []);
+    const act = b.dataset.tbtn;
+    if (act === '添加明细') rows.push({});
+    else if (act === '复制行'){ if (!idx.length) return toast('请先勾选或新增一行'); rows.push(Object.assign({}, rows[idx[0]])); }
+    else if (act === '插行') rows.splice(idx.length ? idx[0] : rows.length, 0, {});
+    else if (act === '删行'){ if (!ck.length) return toast('请先勾选要删除的明细行'); ck.slice().sort((a,b)=>b-a).forEach(i => rows.splice(i,1)); }
+    else if (act === '清除数据') rows.forEach(r => Object.keys(r).forEach(k => delete r[k]));
+    else if (act === '反选'){ $$('#'+gridBodyId(grid)+' [data-ck]').forEach(c => c.checked = !c.checked); return; }
+    else if (act === '取消选择'){ $$('#'+gridBodyId(grid)+' [data-ck]').forEach(c => c.checked = false); return; }
+    if (grid === 'bids') renderBids();
+    else if (grid === 'risk') renderInner();
+    else { renderDetail(); renderSummary(); }
+  });
+
+  /* 人员选择 / 附件 / 变更提交 */
+  document.addEventListener('click', e => {
+    const rm = e.target.closest('.rm[data-pick]');
+    if (rm){
+      const key = rm.dataset.pick, name = rm.dataset.rm;
+      setPick(key, pickList(key).filter(n => n !== name));
+      return;
+    }
+    const pick = e.target.closest('[data-pick]');
+    if (pick && !pick.classList.contains('rm') && !pick.classList.contains('ro')){ openPicker(pick.dataset.pick); return; }
+  });
+
+  /* 相关附件：上传弹窗 / 单文件下载 / 分类筛选 / 删除 / 归类 */
+  document.addEventListener('click', e => { if (!e.target.closest('.updd')) closeUpMenus(); });
+  $('#btnUpload').onclick = e => {
+    e.stopPropagation();
+    const t = typeOf(form.typeKey), cats = (t && t.attaches) || [];
+    if (!cats.length) return openUpload({ list:fileList(), cats:true, onDone:renderAttach });
+    const m = $('#upMenu'); if (!m) return;
+    const on = m.classList.contains('on');
+    closeUpMenus();
+    if (!on) m.classList.add('on');
+  };
+  $('#upMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-ucat]'); if (!b) return;
+    closeUpMenus();
+    openUpload({ list:fileList(), cats:true, cat:b.dataset.ucat, onDone:renderAttach });
+  });
+  $('#attachTable').addEventListener('click', e => {
+    const dl = e.target.closest('[data-fdl]');
+    if (dl){
+      const f = fileList()[Number(dl.dataset.fdl)];
+      return f ? toast('已开始下载：'+f.name) : toast('文件不存在');
+    }
+    const d = e.target.closest('[data-fdel]'); if (!d) return;
+    const i = Number(d.dataset.fdel), f = fileList()[i]; if (!f) return;
+    fileList().splice(i, 1); renderAttach(); toast('已删除附件：'+f.name);
+  });
+  $('#attachGroups').addEventListener('click', e => {
+    const up = e.target.closest('[data-gup]');
+    if (up){
+      const t = typeOf(form.typeKey), g = t && t.attachGroups && t.attachGroups[Number(up.dataset.gup)];
+      if (g) openUpload({ list:fileList(), cats:false, cat:g.label, onDone:renderAttach });
+      return;
+    }
+    const dl = e.target.closest('[data-gdl]');
+    if (dl){
+      const f = fileList()[Number(dl.dataset.gdl)];
+      return f ? toast('已开始下载：'+f.name) : toast('文件不存在');
+    }
+    const d = e.target.closest('[data-gdel]'); if (!d) return;
+    const i = Number(d.dataset.gdel), f = fileList()[i]; if (!f) return;
+    fileList().splice(i, 1); renderAttach(); toast('已删除附件：'+f.name);
+  });
+  $('#attachGroups').addEventListener('input', e => {
+    const el = e.target; if (el.dataset.gk == null) return;
+    form.data[el.dataset.gk] = el.value;
+    const h = el.parentNode && el.parentNode.querySelector('.taCount');
+    if (h) h.textContent = String(el.value||'').length + ' / ' + (el.getAttribute('maxlength')||5000);
+  });
+  /* 内控核验：上传 / 删除 / 分类 / 明细编辑 */
+  $('#innerZone').addEventListener('click', e => {
+    if (e.target.closest('#innerUp')){
+      e.stopPropagation();
+      const cfg = (typeOf(form.typeKey) || {}).inner || {};
+      const cats = cfg.attachCats || [];
+      if (!cats.length) return openUpload({ list:innerFiles(), cats:false, cat:'', onDone:renderInner });
+      const m = $('#innerMenu'); if (!m) return;
+      const on = m.classList.contains('on');
+      closeUpMenus();
+      if (!on) m.classList.add('on');
+      return;
+    }
+    const icb = e.target.closest('[data-icat]');
+    if (icb){
+      closeUpMenus();
+      return openUpload({ list:innerFiles(), cats:false, cat:icb.dataset.icat, onDone:renderInner });
+    }
+    const idl = e.target.closest('[data-ifdl]');
+    if (idl){
+      const f = innerFiles()[Number(idl.dataset.ifdl)];
+      return f ? toast('已开始下载：'+f.name) : toast('文件不存在');
+    }
+    const del = e.target.closest('[data-ifdel]');
+    if (del){
+      const i = Number(del.dataset.ifdel), f = innerFiles()[i];
+      innerFiles().splice(i, 1); renderInner();
+      return toast('已删除附件：'+(f ? f.name : ''));
+    }
+  });
+  const innerEdit = e => {
+    const el = e.target;
+    if (el.dataset.ik == null) return;
+    const d = innerData();
+    if (el.dataset.ii == null){ d.data[el.dataset.ik] = el.value; return; }
+    const i = Number(el.dataset.ii);
+    if (!d.detail[i]) d.detail[i] = {};
+    d.detail[i][el.dataset.ik] = el.value;
+  };
+  $('#innerZone').addEventListener('input', innerEdit);
+  $('#innerZone').addEventListener('change', innerEdit);
+  $('#chgAdd').onclick = chgAdd;
+  $('#chgSave').onclick = chgSave;
+  $('#chgSubmit').onclick = submitChange;
+  const chgEdit = e => {
+    const el = e.target.closest('[data-caf]'); if (!el) return;
+    const it = chg.items.find(x => x.k === el.dataset.caf); if (it) it.after = el.value;
+  };
+  $('#chgInfoBody').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-ci]'); if (!tr) return;
+    chgSelectRec(Number(tr.dataset.ci));
+  });
+  $('#chgRecBody').addEventListener('input', chgEdit);
+  $('#chgRecBody').addEventListener('change', chgEdit);
+  $('#chgRecBody').addEventListener('click', e => {
+    const d = e.target.closest('[data-cdel]'); if (!d) return;
+    chg.items.splice(Number(d.dataset.cdel), 1);
+    renderChgRec(curProj()); toast('已移除该变更项');
+  });
+
+  /* 弹窗 */
+  $('#mClose').onclick = closeModal;
+  $('#mask').onclick = e => { if (e.target.id === 'mask') closeModal(); };
+
+}
+
+/* ============ 初始化 ============ */
+(function init(){
+  /* 默认选中项目列表第一条数据，详情区随之展示该项目信息 */
+  const first = filtered()[0];
+  if (first){ selId = first.id; loadForm(first); chg = { id:first.id, items:[], draft:null, mode:'view', idx:0 }; }
+  renderList(); renderForm(); renderChange(); bindAll();
+})();
+</script>
+</body>
+</html>
