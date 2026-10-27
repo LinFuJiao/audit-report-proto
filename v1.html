@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WPS 报告预览 · 评估与评论</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <style>
+    :root {
+      --brand: #165dff;
+      --brand-deep: #0f47d4;
+      --ink: #1f2733;
+      --text: #333b47;
+      --muted: #747e8c;
+      --muted-2: #9ba4b1;
+      --line: #e5e7eb;
+      --line-2: #eceef1;
+      --canvas: #efeff0;
+      --green: #0d9c6e;
+      --green-soft: #eafbf4;
+      --orange: #db8414;
+      --orange-soft: #fff7e8;
+      --navy: #27364c;
+      --font: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #ededee;
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; }
+    button, [role="button"] { -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c4c9d1; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aab1bc; }
+    .icon { width: 16px; height: 16px; display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+
+    .wps-app { height: 100vh; min-height: 600px; display: flex; flex-direction: column; background: #ededee; }
+
+    /* WPS window title and menu */
+    .wps-titlebar {
+      height: 44px;
+      flex: 0 0 44px;
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border-bottom: 1px solid #e3e5e8;
+      padding: 0 9px 0 8px;
+      position: relative;
+      z-index: 30;
+    }
+    .wps-menu-trigger {
+      width: 31px;
+      height: 31px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      color: #4d5561;
+      cursor: pointer;
+    }
+    .wps-menu-trigger:hover { background: #f1f3f5; }
+    .doc-identity { display: flex; align-items: center; gap: 7px; min-width: 170px; margin-left: 4px; }
+    .doc-name { max-width: 240px; font-size: 12px; font-weight: 600; color: #414956; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .readonly-badge { font-size: 10px; color: #9aa2ae; white-space: nowrap; }
+    .wps-menu { display: flex; align-items: center; align-self: stretch; gap: 1px; margin-left: 18px; }
+    .wps-menu-item {
+      align-self: stretch;
+      border: 0;
+      background: transparent;
+      color: #323a45;
+      padding: 0 13px;
+      font-size: 12px;
+      cursor: pointer;
+      position: relative;
+    }
+    .wps-menu-item:hover { background: #f7f8fa; }
+    .wps-menu-item.active { color: #1f5eff; font-weight: 600; }
+    .wps-menu-item.active::after {
+      content: "";
+      position: absolute;
+      left: 11px;
+      right: 11px;
+      bottom: 0;
+      height: 2px;
+      background: #1f5eff;
+    }
+    .host-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .host-action {
+      height: 29px;
+      border: 1px solid #dfe4ec;
+      border-radius: 6px;
+      background: #fff;
+      color: #536174;
+      padding: 0 9px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 150ms ease;
+      white-space: nowrap;
+    }
+    .host-action:hover { border-color: #aebcd3; background: #f8faff; color: #2459c7; }
+    .host-action .icon { width: 13px; height: 13px; }
+    .host-action.active { border-color: #adc4fb; background: #edf3ff; color: #165dff; }
+    .wps-close {
+      height: 30px;
+      min-width: 54px;
+      border: 0;
+      border-radius: 6px;
+      background: #293a50;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 3px;
+    }
+    .wps-close:hover { background: #1f2d40; }
+
+    /* WPS formatting toolbar */
+    .wps-toolbar {
+      height: 50px;
+      flex: 0 0 50px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 13px;
+      background: #fff;
+      border-bottom: 1px solid #e4e6e9;
+      position: relative;
+      z-index: 20;
+      overflow: hidden;
+    }
+    .tb-group { display: inline-flex; align-items: center; gap: 1px; flex: 0 0 auto; }
+    .tb-btn {
+      min-width: 27px;
+      height: 27px;
+      padding: 0 5px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: #4f5865;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .tb-btn:hover { background: #f2f4f7; border-color: #e5e8ec; }
+    .tb-btn .icon { width: 14px; height: 14px; }
+    .tb-btn.text-button { font-size: 11px; font-weight: 600; }
+    .tb-btn.bold { font-weight: 800; }
+    .tb-btn.italic { font-style: italic; font-family: Georgia, serif; }
+    .tb-btn.underline { text-decoration: underline; }
+    .tb-divider { width: 1px; height: 20px; background: #e7e9ec; margin: 0 4px; flex: 0 0 1px; }
+    .tb-select {
+      height: 27px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: #49515d;
+      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 5px;
+      cursor: pointer;
+    }
+    .tb-select:hover { background: #f2f4f7; border-color: #e5e8ec; }
+    .tb-select .icon { width: 11px; height: 11px; color: #727c8a; }
+    .color-mark { height: 2px; border-radius: 2px; background: #d94645; margin-top: 1px; }
+    .tb-spring { flex: 1; }
+    .tb-collapse { color: #8e97a4; }
+
+    /* Main editor + sidecar */
+    .wps-workspace { flex: 1; min-height: 0; display: flex; }
+    .wps-editor { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #ededee; }
+    .wps-canvas {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 24px 28px 35px;
+      background-color: #f0f1f2;
+      background-image: radial-gradient(#d8dade 0.55px, transparent 0.55px);
+      background-size: 11px 11px;
+      position: relative;
+    }
+    .paper-scroll {
+      width: min(600px, calc(100% - 10px));
+      margin: 0 auto;
+      position: relative;
+    }
+    .paper {
+      width: 100%;
+      aspect-ratio: 210 / 297;
+      min-height: 0;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(32, 35, 40, 0.16), 0 0 0 1px rgba(0,0,0,.035);
+      padding: 8.5% 10% 7%;
+      position: relative;
+      color: #25272a;
+      font-family: "Songti SC", SimSun, serif;
+      font-size: 10.2px;
+      line-height: 1.8;
+    }
+    .paper-head { display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #474d55; letter-spacing: .02em; }
+    .paper-head .report-type { color: #3e67c7; font-weight: 700; }
+    .paper-rule { height: 1px; background: #cfd8e7; margin: 7px 0 0; }
+    .paper-title { margin: 34px 0 8px; text-align: center; font-size: 28px; line-height: 1.35; font-weight: 700; letter-spacing: .18em; color: #1e2228; }
+    .paper-subtitle { text-align: center; color: #757d87; font-size: 9px; margin-bottom: 34px; }
+    .paper-section { margin-top: 19px; }
+    .paper-section h2 { font-size: 12px; line-height: 1.7; margin: 0 0 3px; color: #2a2f36; font-weight: 700; }
+    .paper-section p { margin: 0 0 5px; text-indent: 2em; color: #3c424b; }
+    .paper-placeholder { margin: 2px 0 8px; color: #b3b8c0; letter-spacing: .1em; font-size: 9px; }
+    .paper-note { margin: 3px 0 0 2em; color: #59616b; font-size: 9.5px; }
+    .paper-issue { margin: 8px 0 8px; padding: 7px 9px; background: #f7f9fc; border-left: 2px solid #7f9edb; color: #3d4652; font-size: 9.2px; line-height: 1.65; }
+    .paper-issue b { color: #2a3442; }
+    .paper-signature { margin-top: 80px; text-align: center; font-size: 10px; line-height: 1.9; color: #2e3339; }
+    .paper-page { position: absolute; right: 10%; bottom: 4.5%; left: 10%; padding-top: 5px; border-top: 1px solid #e7e9ec; display: flex; justify-content: space-between; color: #afb4bb; font-size: 7px; }
+    .readership-strip {
+      min-height: 41px;
+      flex: 0 0 41px;
+      padding: 0 14px;
+      border-bottom: 1px solid #edf0f3;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .readership-strip-label { display: inline-flex; align-items: center; gap: 5px; color: #5e6d82; font-size: 9px; font-weight: 700; white-space: nowrap; }
+    .readership-strip-label .icon { width: 12px; height: 12px; color: #71849e; }
+    .readership-metrics { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+    .readership-metric { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+    .readership-metric strong { font-size: 12px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .readership-metric span { color: #8a96a6; font-size: 7.5px; }
+    .readership-metric.expected strong { color: #356cca; }
+    .readership-metric.read strong { color: #0d8f66; }
+    .readership-metric.unread strong { color: #c3761a; }
+    .readership-metric + .readership-metric { padding-left: 12px; border-left: 1px solid #e1e7ee; }
+    .canvas-footnote { width: min(600px, calc(100% - 10px)); margin: 9px auto 0; display: flex; justify-content: flex-end; color: #979da6; font-size: 8px; letter-spacing: .02em; pointer-events: none; }
+
+    /* WPS bottom status bar */
+    .wps-statusbar {
+      height: 26px;
+      flex: 0 0 26px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 0 12px;
+      border-top: 1px solid #dfe2e6;
+      background: #fff;
+      color: #6b7480;
+      font-size: 9.5px;
+      user-select: none;
+    }
+    .status-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .status-item .icon { width: 12px; height: 12px; color: #858f9c; }
+    .status-spring { flex: 1; }
+    .zoom-inline { display: inline-flex; align-items: center; gap: 3px; }
+    .zoom-btn { border: 0; background: transparent; width: 18px; height: 20px; border-radius: 3px; display: grid; place-items: center; color: #69727e; cursor: pointer; padding: 0; }
+    .zoom-btn:hover { background: #f0f2f5; }
+    .zoom-btn .icon { width: 11px; height: 11px; }
+    .zoom-value { min-width: 30px; text-align: center; color: #5a6470; font-size: 9px; }
+
+    /* Sidecar */
+    .sidecar {
+      width: 418px;
+      flex: 0 0 418px;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-left: 1px solid #dfe3e9;
+      box-shadow: -7px 0 20px rgba(33, 43, 57, 0.045);
+      position: relative;
+      z-index: 25;
+    }
+    .sidecar.closed { display: none; }
+    .sidecar-head {
+      height: 55px;
+      flex: 0 0 55px;
+      padding: 0 12px 0 14px;
+      border-bottom: 1px solid #edf0f3;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+    }
+    .sidecar-mark {
+      width: 27px;
+      height: 27px;
+      border-radius: 7px;
+      background: #eaf1ff;
+      color: #165dff;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .sidecar-mark .icon { width: 14px; height: 14px; }
+    .sidecar-heading { min-width: 0; flex: 1; }
+    .sidecar-title-line { display: flex; align-items: center; gap: 6px; }
+    .sidecar-title { font-size: 12px; font-weight: 700; color: #283244; white-space: nowrap; }
+    .template-badge {
+      height: 17px;
+      padding: 0 5px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #f1f4f8;
+      color: #7c8797;
+      font-size: 7.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .template-badge .icon { width: 8px; height: 8px; }
+    .sidecar-sub { margin-top: 2px; color: #96a0ae; font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidecar-tabs {
+      height: 43px;
+      flex: 0 0 43px;
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid #e8ebef;
+      padding: 0 12px;
+      background: #fff;
+    }
+    .sidecar-tab {
+      border: 0;
+      background: transparent;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #778293;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+    }
+    .sidecar-tab .icon { width: 14px; color: #8a96a6; }
+    .sidecar-tab:hover { color: #293446; background: #fbfcfe; }
+    .sidecar-tab.active { color: #165dff; }
+    .sidecar-tab.active .icon { color: #165dff; }
+    .sidecar-tab.active::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; background: #165dff; border-radius: 2px 2px 0 0; }
+    .pane { display: none; flex: 1; min-height: 0; }
+    .pane.active { display: flex; flex-direction: column; }
+    /* Evaluation pane */
+    #evalPane { overflow-y: auto; background: #fff; }
+    .eval-wrap { padding: 12px 14px 18px; }
+    .eval-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      border: 1px solid #dce8ff;
+      border-radius: 9px;
+      background: linear-gradient(120deg, #f4f8ff 0%, #fbfdff 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .eval-summary::after {
+      content: "";
+      position: absolute;
+      right: -38px;
+      top: -48px;
+      width: 102px;
+      height: 102px;
+      border-radius: 50%;
+      background: rgba(22,93,255,.045);
+      box-shadow: 0 0 0 18px rgba(22,93,255,.015);
+    }
+    .eval-summary-copy { flex: 1; min-width: 0; position: relative; z-index: 1; }
+    .eval-eyebrow { display: block; color: #3468cc; font-size: 7.5px; font-weight: 800; letter-spacing: .1em; margin-bottom: 3px; }
+    .eval-title { margin: 0; color: #26344e; font-size: 13.5px; line-height: 1.35; }
+    .eval-meta { display: flex; align-items: center; gap: 9px; margin-top: 5px; color: #7d8ca1; font-size: 8px; }
+    .eval-meta span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+    .eval-meta .icon { width: 10px; height: 10px; }
+    .progress-ring {
+      --value: 67;
+      width: 47px;
+      height: 47px;
+      flex: 0 0 47px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--brand) calc(var(--value) * 1%), #dfe9fa 0);
+      position: relative;
+      z-index: 1;
+      transition: background 220ms ease;
+    }
+    .progress-ring::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #f8fbff; }
+    .progress-ring span { position: relative; color: #245dcc; font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .save-state { height: 28px; display: flex; align-items: center; gap: 5px; color: #8c97a6; font-size: 8px; padding: 0 2px; }
+    .save-dot { width: 4px; height: 4px; border-radius: 50%; background: #16a471; }
+    .save-state.saving .save-dot { background: #d99b20; animation: pulseDot 1s infinite; }
+    .save-time { margin-left: auto; color: #a4acb8; }
+    @keyframes pulseDot { 50% { opacity: .28; transform: scale(.7); } }
+    .backend-note {
+      min-height: 29px;
+      padding: 6px 8px;
+      border: 1px solid #e5eaf1;
+      border-radius: 7px;
+      background: #f8fafc;
+      color: #7f8b9b;
+      font-size: 8px;
+      line-height: 1.55;
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      margin-bottom: 11px;
+    }
+    .backend-note .icon { width: 10px; height: 10px; color: #7588a4; margin-top: 1px; flex: 0 0 auto; }
+    .backend-note strong { color: #5b6a7f; font-weight: 700; }
+    .eval-people-row { margin-bottom: 11px; }
+    .eval-people-head { display: flex; align-items: center; justify-content: space-between; margin: 0 1px 6px; color: #8a95a5; font-size: 8px; }
+    .eval-people-head strong { color: #56667b; font-size: 8.5px; font-weight: 700; }
+    .eval-people { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .eval-person { min-width: 0; height: 31px; border: 1px solid #e5e9ef; border-radius: 6px; background: #fbfcfe; padding: 0 4px; display: flex; align-items: center; gap: 4px; }
+    .eval-person.me { border-color: #cfdcfb; background: #f4f7ff; }
+    .eval-person .avatar { width: 18px; height: 18px; font-size: 6.5px; border-width: 1.5px; box-shadow: 0 0 0 1px #dce3ed; }
+    .eval-person-name { min-width: 0; flex: 1; color: #657286; font-size: 7.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+    .eval-person-progress { color: #8d99a9; font-size: 7px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .eval-person.done .eval-person-progress { color: #0b8a63; }
+    .eval-section-head { display: flex; align-items: center; justify-content: space-between; margin: 0 1px 7px; }
+    .eval-section-title { display: inline-flex; align-items: center; gap: 5px; color: #3c485b; font-size: 9.5px; font-weight: 700; }
+    .eval-section-title .icon { width: 11px; color: #8895a6; }
+    .eval-section-hint { color: #a0a9b6; font-size: 8px; }
+    .dimension-list { display: flex; flex-direction: column; gap: 7px; }
+    .dimension-card {
+      border: 1px solid #e3e8ef;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      transition: 150ms ease;
+    }
+    .dimension-card:hover { border-color: #cdd8e7; }
+    .dimension-card.open { border-color: #b8cbf0; box-shadow: 0 3px 12px rgba(34, 77, 155, .045); }
+    .dimension-head {
+      display: grid;
+      grid-template-columns: 25px minmax(0, 1fr) 12px;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 9px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .dimension-card.open .dimension-head { background: #fbfdff; border-bottom: 1px solid #edf1f6; }
+    .dimension-index {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: #f1f4f8;
+      color: #667991;
+      font-size: 8px;
+      font-weight: 800;
+    }
+    .dimension-card.open .dimension-index { background: #e9f0ff; color: #245dcc; }
+    .dimension-title-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .dimension-title { color: #354155; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dimension-status { height: 15px; padding: 0 4px; border-radius: 3px; display: inline-flex; align-items: center; background: #f0f3f7; color: #8995a4; font-size: 7px; font-weight: 600; white-space: nowrap; }
+    .dimension-status.done { background: #eafaf3; color: #087e59; }
+    .dimension-status.doing { background: #fff7e7; color: #a76b08; }
+    .dimension-comment {
+      border: 0;
+      height: 21px;
+      padding: 0 5px;
+      border-radius: 5px;
+      background: #f4f7fb;
+      color: #7e8b9d;
+      font-size: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+    }
+    .dimension-comment:hover { background: #e8f0ff; color: #165dff; }
+    .dimension-comment .icon { width: 10px; }
+    .dimension-chevron { color: #98a3b1; transition: transform 170ms ease; }
+    .dimension-chevron .icon { width: 11px; }
+    .dimension-card.open .dimension-chevron { transform: rotate(180deg); }
+    .dimension-body { display: none; padding: 9px; }
+    .dimension-card.open .dimension-body { display: block; animation: revealBody 170ms ease; }
+    @keyframes revealBody { from { opacity: .3; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+    .person-tabs { display: flex; align-items: center; gap: 3px; overflow-x: auto; padding-bottom: 1px; margin-bottom: 7px; scrollbar-width: none; }
+    .person-tabs::-webkit-scrollbar { display: none; }
+    .person-tab { flex: 0 0 auto; height: 24px; border: 1px solid #e3e8ef; border-radius: 5px; background: #fff; color: #758195; padding: 0 6px 0 3px; display: inline-flex; align-items: center; gap: 4px; font-size: 7.5px; font-weight: 600; cursor: pointer; }
+    .person-tab:hover { border-color: #c8d4e5; color: #4c5d74; }
+    .person-tab.active { border-color: #adc4fb; background: #edf3ff; color: #165dff; }
+    .person-tab .avatar { width: 17px; height: 17px; font-size: 6px; border-width: 1px; box-shadow: 0 0 0 1px #e0e6ef; }
+    .person-tab .state-dot { width: 4px; height: 4px; border-radius: 50%; background: #c7ced8; }
+    .person-tab.done .state-dot { background: #17a477; }
+    .field-block + .field-block { margin-top: 7px; }
+    .field-label { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+    .field-symbol { width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center; }
+    .field-symbol .icon { width: 10px; height: 10px; }
+    .field-good .field-symbol { background: var(--green-soft); color: var(--green); }
+    .field-gap .field-symbol { background: var(--orange-soft); color: var(--orange); }
+    .field-name { font-size: 9px; font-weight: 700; color: #405067; }
+    .field-good .field-name { color: #087d58; }
+    .field-gap .field-name { color: #a56508; }
+    .field-editor {
+      min-height: 45px;
+      border: 1px solid #e5eaf0;
+      border-radius: 6px;
+      background: #fbfcfe;
+      padding: 7px 8px;
+      color: #3f4b5e;
+      font-size: 9.2px;
+      line-height: 1.6;
+      outline: none;
+      cursor: text;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      transition: 150ms ease;
+    }
+    .field-editor:hover { border-color: #d1dbe8; background: #fff; }
+    .field-editor:focus { border-color: #8fb0f5; background: #fff; box-shadow: 0 0 0 2px rgba(22,93,255,.07); }
+    .field-good .field-editor:focus { border-color: #7dd6b5; box-shadow: 0 0 0 2px rgba(13,156,110,.065); }
+    .field-gap .field-editor:focus { border-color: #edc171; box-shadow: 0 0 0 2px rgba(219,132,20,.065); }
+    .field-editor.readonly { cursor: default; background: #f7f9fc; border-color: #e8ecf1; color: #59667a; }
+    .field-editor.readonly:hover, .field-editor.readonly:focus { background: #f7f9fc; border-color: #e8ecf1; box-shadow: none; }
+    .field-editor:empty::before { content: attr(data-placeholder); color: #adb5c1; pointer-events: none; }
+    .dimension-card[data-viewer="me"] .field-editor { border-color: #6f9cf3; background: #fff; }
+    .dimension-card[data-viewer="me"] .field-editor:hover { border-color: #4f85ed; background: #fff; }
+    .dimension-card[data-viewer="me"] .field-editor:focus { border-color: #165dff; background: #fff; box-shadow: 0 0 0 2px rgba(22,93,255,.08); }
+    .dimension-card:not([data-viewer="me"]) .field-editor { border-color: #e3e8ef; background: #f7f9fc; color: #59667a; cursor: default; }
+    .dimension-card:not([data-viewer="me"]) .field-editor:hover, .dimension-card:not([data-viewer="me"]) .field-editor:focus { border-color: #dfe4ec; background: #f5f7fa; box-shadow: none; }
+    .dimension-footer { margin-top: 7px; display: flex; justify-content: flex-end; }
+    .confirm-eval { height: 22px; padding: 0 10px; border: 1px solid #165dff; border-radius: 4px; background: #165dff; color: #fff; font-size: 8px; font-weight: 700; cursor: pointer; }
+    .confirm-eval:hover { border-color: #0f54e8; background: #0f54e8; }
+    .confirm-eval:disabled { border-color: #e0e6f1; background: #f3f6fb; color: #aab4c2; cursor: not-allowed; }
+    .confirm-eval.confirmed { border-color: #b8e8d8; background: #eafaf3; color: #087e59; }
+    .dimension-card:not([data-viewer="me"]) .dimension-footer { display: none; }
+    /* Comment pane */
+    #commentPane { overflow: hidden; background: #fbfcfe; }
+    .comment-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 11px 13px 20px; }
+    .comment-topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .comment-title { margin: 0; color: #283346; font-size: 12px; }
+    .comment-sub { margin: 2px 0 0; color: #98a2b0; font-size: 8px; }
+    .object-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 7px; background: #f0f3f7; margin-bottom: 9px; }
+    .object-btn { height: 27px; border: 0; border-radius: 5px; background: transparent; color: #778497; font-size: 9px; font-weight: 600; display: inline-flex; justify-content: center; align-items: center; gap: 4px; cursor: pointer; }
+    .object-btn .num { min-width: 14px; height: 14px; padding: 0 3px; border-radius: 99px; background: #e2e7ee; font-size: 7px; font-weight: 700; line-height: 14px; color: #778497; }
+    .object-btn.active { background: #fff; color: #165dff; box-shadow: 0 1px 3px rgba(34,50,75,.09); }
+    .object-btn.active .num { background: #e7efff; color: #165dff; }
+    .composer {
+      display: flex;
+      gap: 8px;
+      padding: 9px;
+      background: #fff;
+      border: 1px solid #e0e6ee;
+      border-radius: 8px;
+      box-shadow: 0 2px 7px rgba(31,50,80,.028);
+      margin-bottom: 9px;
+    }
+    .avatar { border-radius: 50%; display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 0 0 1px #dce3ed; flex: 0 0 auto; font-weight: 700; }
+    .avatar-me { width: 27px; height: 27px; background: linear-gradient(145deg,#2e67f4,#173fbb); color: #fff; font-size: 9px; }
+    .avatar-24 { width: 24px; height: 24px; font-size: 8px; }
+    .avatar-27 { width: 27px; height: 27px; font-size: 8px; }
+    .av-blue { background: linear-gradient(145deg,#d9e5ff,#8fb6ff); color: #164fac; }
+    .av-green { background: linear-gradient(145deg,#d9f6e9,#80d4ae); color: #0a6a4d; }
+    .av-orange { background: linear-gradient(145deg,#ffecd0,#f0b35e); color: #80500b; }
+    .av-violet { background: linear-gradient(145deg,#e8e0ff,#b7a3ef); color: #5a39a5; }
+    .av-rose { background: linear-gradient(145deg,#ffe0e6,#f1a2b4); color: #a0354e; }
+    .av-cyan { background: linear-gradient(145deg,#d7f4f8,#7fccdb); color: #0e6070; }
+    .composer-main { flex: 1; min-width: 0; }
+    .quote-preview { display: none; margin: 2px 0 4px; padding: 4px 6px; border-left: 2px solid #dfaa52; background: #fffbf1; border-radius: 0 3px 3px 0; color: #8e7040; font-size: 8px; line-height: 1.45; }
+    .quote-preview.show { display: block; }
+    .comment-input { min-height: 40px; max-height: 100px; overflow-y: auto; outline: none; color: #3e4a5d; font-size: 9.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .comment-input:empty::before { content: attr(data-placeholder); color: #abb4c1; pointer-events: none; }
+    .composer-tools { display: flex; align-items: center; gap: 2px; padding-top: 5px; margin-top: 2px; border-top: 1px solid #eff2f6; }
+    .mini-tool { width: 22px; height: 21px; border: 0; border-radius: 4px; background: transparent; color: #8d98a8; display: grid; place-items: center; cursor: pointer; padding: 0; }
+    .mini-tool:hover { background: #f2f5f9; color: #165dff; }
+    .mini-tool .icon { width: 12px; }
+    .publish { margin-left: auto; height: 24px; padding: 0 11px; border: 0; border-radius: 5px; background: #165dff; color: #fff; font-size: 8.5px; font-weight: 700; cursor: pointer; }
+    .publish:disabled { background: #b9ccf8; cursor: not-allowed; }
+    .feed-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 1px 6px; border-bottom: 1px solid #ebeff4; color: #7c8899; font-size: 8px; }
+    .feed-head strong { color: #536175; font-size: 9px; font-weight: 700; }
+    .comment-thread { padding: 10px 1px; border-bottom: 1px solid #ebeff4; }
+    .comment-thread:last-child { border-bottom: 0; }
+    .comment-main { display: flex; gap: 8px; }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: -1px; }
+    .comment-name { color: #2f3a4c; font-size: 9.5px; font-weight: 700; }
+    .comment-time { margin-left: auto; color: #aab2be; font-size: 7px; white-space: nowrap; }
+    .comment-text { margin: 5px 0; color: #475367; font-size: 9.5px; line-height: 1.6; overflow-wrap: anywhere; }
+    .comment-quote { margin: 4px 0 6px; padding: 5px 7px; border-left: 2px solid #e4b765; border-radius: 0 3px 3px 0; background: #fffbf2; color: #8a7043; font-size: 8px; line-height: 1.5; }
+    .comment-actions { display: flex; align-items: center; gap: 10px; color: #8d98a7; font-size: 8px; }
+    .comment-action { border: 0; padding: 0; background: transparent; color: #8995a5; display: inline-flex; align-items: center; gap: 3px; font-size: 8px; cursor: pointer; }
+    .comment-action:hover { color: #165dff; }
+    .comment-action .icon { width: 10px; height: 10px; }
+    .comment-action.liked { color: #165dff; font-weight: 600; }
+    .reply-list { margin-top: 7px; padding: 7px 8px; border-radius: 6px; background: #f6f8fb; display: flex; flex-direction: column; gap: 7px; }
+    .reply-item { display: flex; gap: 6px; }
+    .reply-body { flex: 1; min-width: 0; }
+    .reply-head { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .reply-name { color: #4b596d; font-size: 8.5px; font-weight: 700; }
+    .reply-to { color: #8d99a9; font-size: 7.5px; }
+    .reply-time { color: #aab2be; font-size: 7px; }
+    .reply-text { margin: 2px 0; color: #59667a; font-size: 8.5px; line-height: 1.55; }
+    .reply-composer { display: none; margin-top: 6px; padding: 5px 6px; border: 1px solid #dfe6ef; border-radius: 6px; background: #fff; }
+    .reply-composer.show { display: block; }
+    .reply-input { min-height: 27px; outline: none; color: #445166; font-size: 8.5px; line-height: 1.5; }
+    .reply-input:empty::before { content: attr(data-placeholder); color: #adb5c1; }
+    .reply-actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: 4px; }
+    .reply-cancel,.reply-send { height: 21px; border-radius: 4px; padding: 0 7px; font-size: 7.5px; cursor: pointer; border: 1px solid #e2e7ee; background: #fff; color: #788598; }
+    .reply-send { border-color: #165dff; background: #165dff; color: #fff; }
+    .empty-feed { display: none; padding: 28px 10px; text-align: center; color: #9ca5b2; font-size: 9px; }
+
+    /* Closed-panel reopen affordance */
+    .collab-fab {
+      display: none;
+      position: fixed;
+      right: 13px;
+      top: 54px;
+      z-index: 80;
+      height: 32px;
+      border: 1px solid #b8cbf2;
+      border-radius: 7px;
+      background: #fff;
+      color: #2458bf;
+      box-shadow: 0 5px 16px rgba(38, 62, 100, .13);
+      padding: 0 9px;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .collab-fab.show { display: inline-flex; }
+    .collab-fab .icon { width: 12px; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 38px;
+      transform: translate(-50%, 12px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 200;
+      max-width: 360px;
+      padding: 9px 14px;
+      border-radius: 7px;
+      background: rgba(31, 42, 58, .94);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(18,29,45,.24);
+      font-size: 10px;
+      line-height: 1.5;
+      text-align: center;
+      transition: 180ms ease;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* Responsive */
+    @media (max-width: 1150px) {
+      .sidecar { width: 388px; flex-basis: 388px; }
+      .doc-name { max-width: 190px; }
+      .wps-menu-item { padding: 0 9px; }
+      .host-action .label { display: none; }
+    }
+    @media (max-width: 920px) {
+      .sidecar { position: fixed; right: 0; top: 94px; bottom: 26px; width: min(390px, 95vw); flex-basis: auto; height: auto; box-shadow: -14px 0 32px rgba(23,33,48,.16); }
+      .wps-menu { display: none; }
+      .host-action .label { display: inline; }
+    }
+    @media (max-width: 700px) {
+      .wps-toolbar { overflow-x: auto; }
+      .doc-name { max-width: 130px; }
+      .readonly-badge { display: none; }
+      .wps-statusbar .hide-sm { display: none; }
+      .host-action .label { display: none; }
+      .wps-close { min-width: 44px; }
+      .wps-canvas { padding: 12px 10px 24px; }
+      .paper-scroll, .canvas-footnote { width: calc(100% - 4px); }
+      .paper { padding: 8% 7%; font-size: 8.2px; }
+      .paper-title { font-size: 20px; margin-top: 22px; }
+      .paper-subtitle { margin-bottom: 22px; }
+      .paper-signature { margin-top: 45px; }
+      .collab-fab { top: 98px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true">
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.8 7.8 0 0 1-8 7.6 9 9 0 0 1-3.2-.6L4 20l1.5-4A7.3 7.3 0 0 1 4 11.5a7.8 7.8 0 0 1 8-7.6 7.8 7.8 0 0 1 8 7.6Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.4 12 2.3 2.2 4.9-5"/></symbol>
+    <symbol id="i-thumb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 20H5a1 1 0 0 1-1-1v-7.5a1 1 0 0 1 1-1h2.5m0 9.5h9.1a2 2 0 0 0 1.9-1.4l1.6-5.5a2 2 0 0 0-1.9-2.6h-4.4l.8-3.1A2.5 2.5 0 0 0 12.1 4L7.5 11.5V20Z"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 10h.01M15.5 10h.01M8.3 14c.8 1.6 2 2.3 3.7 2.3s2.9-.7 3.7-2.3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4 4 0 0 0 5.8 0l2.5-2.5a4 4 0 0 0-5.6-5.6L11.2 7"/><path d="M14 10.5a4 4 0 0 0-5.8 0l-2.5 2.5a4 4 0 0 0 5.6 5.6l1.5-1.6"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6.2 7.1v5.3l-3.6 1.6v-6.9L4 5Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.7" cy="10.7" r="6.3"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V4h10v4M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="6" rx="1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="8.3" cy="9" r="1.4"/><path d="m5.5 17 4.5-4.5 3.2 3 2.3-2.1 3 3.6"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 4 11l4 4"/><path d="M4 11h9a6 6 0 0 1 6 6v1"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 7 4 4-4 4"/><path d="M20 11h-9a6 6 0 0 0-6 6v1"/></symbol>
+    <symbol id="i-paint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-9.5 9.5H4.5v-6L14 4Z"/><path d="m11.5 6.5 6 6M4.5 16.5h19"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8.2 10V7.5a3.8 3.8 0 0 1 7.6 0V10M12 14v2.5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3"/><path d="M3.8 19c.5-3.2 2.4-5 5.2-5s4.7 1.8 5.2 5"/><path d="M15.5 5.8a2.8 2.8 0 0 1 0 5.4M16.3 14.3c2.2.3 3.6 1.9 4 4.7"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.3v5l3.2 1.8"/></symbol>
+    <symbol id="i-lightbulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 15.2a5.5 5.5 0 1 1 7 0c-.9.7-1.2 1.2-1.2 2.3H9.7c0-1.1-.3-1.6-1.2-2.3Z"/><path d="M9.7 20h4.6M10.2 17.5h3.6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 20H3L12 3.5Z"/><path d="M12 9v5M12 17h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 10.5V16M12 7.8h.01"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7L12 3Z"/><path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></symbol>
+    <symbol id="i-align-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h10M4 14h16M4 18h9"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+    <symbol id="i-comment-add" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.8 7.8 0 0 1-8 7.6 9 9 0 0 1-3.2-.6L4 20l1.5-4A7.3 7.3 0 0 1 4 11.5a7.8 7.8 0 0 1 8-7.6 7.8 7.8 0 0 1 8 7.6Z"/><path d="M12 8.5v6M9 11.5h6"/></symbol>
+  </svg>
+
+  <div class="wps-app">
+    <header class="wps-titlebar">
+      <button class="wps-menu-trigger" title="菜单" aria-label="菜单" onclick="toast('打开 WPS 文件菜单')"><svg class="icon"><use href="#i-menu"></use></svg></button>
+      <div class="doc-identity"><span class="doc-name">审计报告新模版 (2)</span><span class="readonly-badge">只读</span></div>
+      <nav class="wps-menu" aria-label="WPS 菜单">
+        <button class="wps-menu-item active">开始</button>
+        <button class="wps-menu-item">插入</button>
+        <button class="wps-menu-item">页面</button>
+        <button class="wps-menu-item">审阅</button>
+        <button class="wps-menu-item">视图</button>
+        <button class="wps-menu-item">效率</button>
+      </nav>
+      <div class="host-actions">
+        <button class="host-action active" id="openEvalBtn" onclick="openPanel('eval')" title="打开质量评估">
+          <svg class="icon"><use href="#i-check"></use></svg><span class="label">评估</span>
+        </button>
+        <button class="host-action" id="openCommentBtn" onclick="openPanel('comment')" title="打开讨论区">
+          <svg class="icon"><use href="#i-message"></use></svg><span class="label">评论</span>
+        </button>
+        <button class="wps-close" onclick="toast('关闭预览并返回报告列表')">关闭</button>
+      </div>
+    </header>
+
+    <div class="wps-workspace">
+      <section class="wps-editor" aria-label="WPS 报告编辑器">
+        <div class="wps-toolbar" aria-label="格式工具栏">
+          <div class="tb-group">
+            <button class="tb-btn" title="撤销" onclick="toast('当前为只读预览模式')"><svg class="icon"><use href="#i-undo"></use></svg></button>
+            <button class="tb-btn" title="恢复" onclick="toast('当前为只读预览模式')"><svg class="icon"><use href="#i-redo"></use></svg></button>
+            <button class="tb-btn" title="格式刷" onclick="toast('格式刷')"><svg class="icon"><use href="#i-paint"></use></svg></button>
+          </div>
+          <div class="tb-divider"></div>
+          <div class="tb-group">
+            <button class="tb-select">正文 <svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+            <button class="tb-select">小四 <svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+          </div>
+          <div class="tb-divider"></div>
+          <div class="tb-group">
+            <button class="tb-btn bold" title="加粗">B</button>
+            <button class="tb-btn italic" title="斜体">I</button>
+            <button class="tb-btn underline" title="下划线">U</button>
+            <button class="tb-btn" title="字体颜色"><span style="font-weight:700">A</span><span class="color-mark" style="width:10px;margin-left:1px"></span></button>
+          </div>
+          <div class="tb-divider"></div>
+          <div class="tb-group">
+            <button class="tb-btn" title="字体高亮" onclick="toast('字体高亮')"><span style="background:#fff0b8;padding:0 2px">A</span></button>
+            <button class="tb-btn" title="清除格式" onclick="toast('清除格式')"><span style="font-size:10px">A</span><span style="font-size:7px;color:#9aa2ad">×</span></button>
+          </div>
+          <div class="tb-divider"></div>
+          <div class="tb-group">
+            <button class="tb-btn" title="左对齐"><svg class="icon"><use href="#i-align-left"></use></svg></button>
+            <button class="tb-btn" title="列表"><svg class="icon"><use href="#i-list"></use></svg></button>
+          </div>
+          <div class="tb-divider"></div>
+          <div class="tb-group">
+            <button class="tb-btn" title="插入图片"><svg class="icon"><use href="#i-image"></use></svg></button>
+            <button class="tb-btn" title="插入链接"><svg class="icon"><use href="#i-link"></use></svg></button>
+            <button class="tb-btn" title="插入评论" onclick="openPanel('comment')"><svg class="icon"><use href="#i-comment-add"></use></svg></button>
+          </div>
+          <span class="tb-spring"></span>
+          <div class="tb-group">
+            <button class="tb-btn" title="搜索" onclick="toast('在文档中搜索')"><svg class="icon"><use href="#i-search"></use></svg></button>
+            <button class="tb-btn" title="打印" onclick="toast('打印预览')"><svg class="icon"><use href="#i-print"></use></svg></button>
+            <button class="tb-btn tb-collapse" title="收起工具栏" onclick="toast('工具栏已收起（演示）')"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+          </div>
+        </div>
+
+        <div class="wps-canvas" id="wpsCanvas">
+          <div class="paper-scroll">
+            <article class="paper">
+              <div class="paper-head"><span>编号：YLIA-BG-2026-046</span><span class="report-type">【审计报告】</span></div>
+              <div class="paper-rule"></div>
+              <h1 class="paper-title">专项审计报告</h1>
+              <div class="paper-subtitle">星海集团采购与合同管理专项审计</div>
+              <section class="paper-section">
+                <h2>一、审计背景、目的与范围</h2>
+                <p>根据集团 2025 年度内部审计计划，审计组对采购与合同管理开展专项审计，重点关注供应商准入、采购定价、合同审批及履约验收等关键环节。</p>
+                <div class="paper-placeholder">……</div>
+              </section>
+              <section class="paper-section">
+                <h2>二、审计结果</h2>
+                <p class="paper-note">（汇总提炼 3–5 项本审计项目发现的重要问题，有助于管理层聚焦了解并重点跟进。）</p>
+                <div class="paper-issue"><b>（一）供应商准入复核不到位。</b>抽查发现 3 家新增供应商未完成实地考察，2 家供应商工商变更记录未及时更新。</div>
+                <div class="paper-issue"><b>（二）关联方交易穿透核查不充分。</b>部分供应商最终受益人识别仅停留在股权比例层面，未结合实际控制关系进一步核查。</div>
+              </section>
+              <section class="paper-section">
+                <h2>三、详情报告</h2>
+                <p>详见附件一至附件三的审计程序、样本明细及证据索引。</p>
+              </section>
+              <section class="paper-section">
+                <h2>四、管理建议</h2>
+                <p>建议完善供应商准入联合复核机制，补充关联方穿透核查清单，并建立合同履约与付款的自动校验规则。</p>
+              </section>
+              <div class="paper-signature">集团审计部<br>2025 年 10 月 26 日</div>
+              <div class="paper-page"><span>内部资料 · 请勿外传</span><span>第 1 页 / 共 1 页</span></div>
+            </article>
+          </div>
+          <div class="canvas-footnote">WPS Office · WebOffice 在线预览</div>
+        </div>
+
+        <footer class="wps-statusbar">
+          <span class="status-item">页面：1/1</span>
+          <span class="status-item hide-sm">节：1/1</span>
+          <span class="status-item hide-sm">行：3，列：8</span>
+          <span class="status-item hide-sm">字数：95</span>
+          <span class="status-spring"></span>
+          <span class="status-item hide-sm"><svg class="icon"><use href="#i-grid"></use></svg> 页面视图</span>
+          <span class="status-item zoom-inline"><button class="zoom-btn" onclick="changeZoom(-10)"><svg class="icon"><use href="#i-minus"></use></svg></button><span class="zoom-value" id="zoomValue">80%</span><button class="zoom-btn" onclick="changeZoom(10)"><svg class="icon"><use href="#i-plus"></use></svg></button></span>
+          <button class="zoom-btn" title="全屏" onclick="toast('进入全屏预览（演示）')"><svg class="icon"><use href="#i-expand"></use></svg></button>
+        </footer>
+      </section>
+
+      <aside class="sidecar" id="sidecar" aria-label="协作审阅">
+        <div class="readership-strip" aria-label="报告阅读情况">
+          <div class="readership-strip-label"><svg class="icon"><use href="#i-users"></use></svg>阅读情况</div>
+          <div class="readership-metrics">
+            <span class="readership-metric expected"><strong>12</strong><span>应读人数</span></span>
+            <span class="readership-metric read"><strong>8</strong><span>已读人数</span></span>
+            <span class="readership-metric unread"><strong>4</strong><span>未读人数</span></span>
+          </div>
+        </div>
+
+        <div class="sidecar-tabs" role="tablist" aria-label="协作审阅">
+          <button class="sidecar-tab active" id="evalTab" data-tab="eval" role="tab" aria-selected="true" onclick="switchTab('eval')">
+            <svg class="icon"><use href="#i-check"></use></svg> 评估
+          </button>
+          <button class="sidecar-tab" id="commentTab" data-tab="comment" role="tab" aria-selected="false" onclick="switchTab('comment')">
+            <svg class="icon"><use href="#i-message"></use></svg> 评论
+          </button>
+        </div>
+
+        <div class="pane active" id="evalPane" role="tabpanel">
+          <div class="eval-wrap">
+            <div class="eval-section-head"><span class="eval-section-title"><svg class="icon"><use href="#i-grid"></use></svg> 评估维度</span><span class="eval-section-hint">点击维度展开，切换评审人查看</span></div>
+            <div class="dimension-list" id="dimensionList">
+              <article class="dimension-card open" data-status="done" data-dimension="d1" data-viewer="me">
+                <div class="dimension-head" role="button" tabindex="0" aria-expanded="true" onclick="toggleDimension(this)">
+                  <span class="dimension-index">01</span>
+                  <div style="min-width:0">
+                    <div class="dimension-title-row"><span class="dimension-title">审计程序与证据充分性</span><span class="dimension-status done">已完成</span></div>
+                  </div>
+                  <span class="dimension-chevron"><svg class="icon"><use href="#i-chevron-down"></use></svg></span>
+                </div>
+                <div class="dimension-body">
+                  <div class="person-tabs" role="tablist" aria-label="审计程序与证据充分性评审人">
+                    <button class="person-tab active done" data-reviewer="me"><span class="avatar avatar-me">周</span>我<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="wang"><span class="avatar av-green">王</span>王璐<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="zhang"><span class="avatar av-orange">张</span>张敏<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="li"><span class="avatar av-blue">李</span>李晨<span class="state-dot"></span></button>
+                  </div>
+                  <div class="field-block field-good">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-lightbulb"></use></svg></span><span class="field-name">亮点</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="good" data-placeholder="记录该维度的突出表现、有效方法或可复用经验…">抽样覆盖三类高风险采购场景，关键证据均完成交叉验证，底稿索引完整且可追溯。</div>
+                  </div>
+                  <div class="field-block field-gap">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-alert"></use></svg></span><span class="field-name">不足</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="gap" data-placeholder="指出证据、程序或结论上的不足，并给出可执行建议…">对关联方交易的穿透核查范围偏窄，建议补充近 12 个月供应商变更记录。</div>
+                  </div>
+                  <div class="dimension-footer"><button class="confirm-eval" type="button" onclick="confirmDimension(this)">确定</button></div>
+                </div>
+              </article>
+
+              <article class="dimension-card" data-status="done" data-dimension="d2" data-viewer="me">
+                <div class="dimension-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleDimension(this)">
+                  <span class="dimension-index">02</span>
+                  <div style="min-width:0">
+                    <div class="dimension-title-row"><span class="dimension-title">问题定性与逻辑严谨性</span><span class="dimension-status done">已完成</span></div>
+                  </div>
+                  <span class="dimension-chevron"><svg class="icon"><use href="#i-chevron-down"></use></svg></span>
+                </div>
+                <div class="dimension-body">
+                  <div class="person-tabs" role="tablist" aria-label="问题定性与逻辑严谨性评审人">
+                    <button class="person-tab active done" data-reviewer="me"><span class="avatar avatar-me">周</span>我<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="wang"><span class="avatar av-green">王</span>王璐<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="zhang"><span class="avatar av-orange">张</span>张敏<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="li"><span class="avatar av-blue">李</span>李晨<span class="state-dot"></span></button>
+                  </div>
+                  <div class="field-block field-good">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-lightbulb"></use></svg></span><span class="field-name">亮点</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="good" data-placeholder="记录该维度的突出表现、有效方法或可复用经验…">问题描述均引用制度条款与凭证编号，责任主体界定清晰，结论与发现一一对应。</div>
+                  </div>
+                  <div class="field-block field-gap">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-alert"></use></svg></span><span class="field-name">不足</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="gap" data-placeholder="指出证据、程序或结论上的不足，并给出可执行建议…">部分金额影响测算未披露关键假设，建议补充敏感性区间及测算口径说明。</div>
+                  </div>
+                  <div class="dimension-footer"><button class="confirm-eval" type="button" onclick="confirmDimension(this)">确定</button></div>
+                </div>
+              </article>
+
+              <article class="dimension-card" data-status="empty" data-dimension="d3" data-viewer="me">
+                <div class="dimension-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleDimension(this)">
+                  <span class="dimension-index">03</span>
+                  <div style="min-width:0">
+                    <div class="dimension-title-row"><span class="dimension-title">建议可行性与业务价值</span><span class="dimension-status">待填写</span></div>
+                  </div>
+                  <span class="dimension-chevron"><svg class="icon"><use href="#i-chevron-down"></use></svg></span>
+                </div>
+                <div class="dimension-body">
+                  <div class="person-tabs" role="tablist" aria-label="建议可行性与业务价值评审人">
+                    <button class="person-tab active" data-reviewer="me"><span class="avatar avatar-me">周</span>我<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="wang"><span class="avatar av-green">王</span>王璐<span class="state-dot"></span></button>
+                    <button class="person-tab done" data-reviewer="zhang"><span class="avatar av-orange">张</span>张敏<span class="state-dot"></span></button>
+                    <button class="person-tab" data-reviewer="li"><span class="avatar av-blue">李</span>李晨<span class="state-dot"></span></button>
+                  </div>
+                  <div class="field-block field-good">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-lightbulb"></use></svg></span><span class="field-name">亮点</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="good" data-placeholder="记录该维度的突出表现、有效方法或可复用经验…"></div>
+                  </div>
+                  <div class="field-block field-gap">
+                    <div class="field-label"><span class="field-symbol"><svg class="icon"><use href="#i-alert"></use></svg></span><span class="field-name">不足</span></div>
+                    <div class="field-editor" contenteditable="true" spellcheck="false" data-field="gap" data-placeholder="指出证据、程序或结论上的不足，并给出可执行建议…"></div>
+                  </div>
+                  <div class="dimension-footer"><button class="confirm-eval" type="button" onclick="confirmDimension(this)">确定</button></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="pane" id="commentPane" role="tabpanel">
+          <div class="comment-scroll">
+            <div class="comment-topline">
+              <div><h2 class="comment-title">报告评论</h2><p class="comment-sub">仅针对报告原文发表意见，支持回复和点赞</p></div>
+            </div>
+
+            <div class="composer">
+              <div class="avatar avatar-me">周</div>
+              <div class="composer-main">
+                <div class="comment-input" id="commentInput" contenteditable="true" spellcheck="false" data-placeholder="说说你对这份报告的看法…"></div>
+                <div class="composer-tools">
+                  <button class="mini-tool" title="表情" onclick="toast('插入表情')"><svg class="icon"><use href="#i-smile"></use></svg></button>
+                  <button class="publish" id="publishBtn" disabled onclick="publishComment()">发布</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="feed-head"><span><strong>报告评论</strong> · 讨论</span></div>
+            <div class="comment-feed" id="commentFeed">
+              <article class="comment-thread" data-target="report">
+                <div class="comment-main">
+                  <div class="avatar avatar-27 av-blue">李</div>
+                  <div class="comment-body">
+                    <div class="comment-meta"><span class="comment-name">李晨</span><span class="comment-time">2 小时前</span></div>
+                    <p class="comment-text">建议把“供应商准入”的影响金额口径写清楚，报告正文最好直接注明含税或不含税。</p>
+                    <div class="comment-actions"><button class="comment-action action-reply"><svg class="icon"><use href="#i-message"></use></svg> 回复</button><button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">6</span></button></div>
+                    <div class="reply-list"><div class="reply-item"><div class="avatar avatar-24 av-green">王</div><div class="reply-body"><div class="reply-head"><span class="reply-name">王璐</span><span class="reply-to">回复 李晨</span><span class="reply-time">1 小时前</span></div><p class="reply-text">已和财务对齐，按含税金额补充在附件中，今天更新一版。</p><div class="comment-actions"><button class="comment-action action-reply" data-name="王璐"><svg class="icon"><use href="#i-message"></use></svg> 回复</button><button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">2</span></button></div></div></div></div>
+                    <div class="reply-composer"><div class="reply-input" contenteditable="true" spellcheck="false" data-placeholder="回复 李晨…"></div><div class="reply-actions"><button class="reply-cancel" onclick="closeReply(this)">取消</button><button class="reply-send" onclick="submitReply(this)">发送</button></div></div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="comment-thread" data-target="report">
+                <div class="comment-main">
+                  <div class="avatar avatar-27 av-rose">周</div>
+                  <div class="comment-body">
+                    <div class="comment-meta"><span class="comment-name">周宁</span><span class="comment-time">4 小时前</span></div>
+                    <p class="comment-text">整改完成时间建议按风险等级拆成两个节点，后续跟踪会更清楚。</p>
+                    <div class="comment-actions"><button class="comment-action action-reply"><svg class="icon"><use href="#i-message"></use></svg> 回复</button><button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">4</span></button></div>
+                    <div class="reply-composer"><div class="reply-input" contenteditable="true" spellcheck="false" data-placeholder="回复 周宁…"></div><div class="reply-actions"><button class="reply-cancel" onclick="closeReply(this)">取消</button><button class="reply-send" onclick="submitReply(this)">发送</button></div></div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="comment-thread" data-target="report">
+                <div class="comment-main">
+                  <div class="avatar avatar-27 av-green">孙</div>
+                  <div class="comment-body">
+                    <div class="comment-meta"><span class="comment-name">孙悦</span><span class="comment-time">昨天 15:08</span></div>
+                    <p class="comment-text">附件中的抽样底稿索引已经补齐，复核时可以按编号直接跳转。</p>
+                    <div class="comment-actions"><button class="comment-action action-reply"><svg class="icon"><use href="#i-message"></use></svg> 回复</button><button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">2</span></button></div>
+                    <div class="reply-composer"><div class="reply-input" contenteditable="true" spellcheck="false" data-placeholder="回复 孙悦…"></div><div class="reply-actions"><button class="reply-cancel" onclick="closeReply(this)">取消</button><button class="reply-send" onclick="submitReply(this)">发送</button></div></div>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div class="empty-feed" id="emptyFeed">当前对象还没有讨论，发布第一条评论吧。</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <button class="collab-fab" id="collabFab" onclick="openPanel('eval')"><svg class="icon"><use href="#i-sparkle"></use></svg> 协作审阅</button>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const state = {
+      panel: 'eval',
+      panelOpen: true,
+      zoom: 80
+    };
+
+    const reviewers = {
+      me: { name: '周然（我）', fullName: '周然', avatar: 'avatar-me' },
+      wang: { name: '王璐', fullName: '王璐', avatar: 'av-green' },
+      zhang: { name: '张敏', fullName: '张敏', avatar: 'av-orange' },
+      li: { name: '李晨', fullName: '李晨', avatar: 'av-blue' }
+    };
+
+    const reviewData = {
+      d1: {
+        me: { good: '抽样覆盖三类高风险采购场景，关键证据均完成交叉验证，底稿索引完整且可追溯。', gap: '对关联方交易的穿透核查范围偏窄，建议补充近 12 个月供应商变更记录。' },
+        wang: { good: '项目组按风险分层抽取 42 笔采购样本，并对 3 类高风险场景完成双向核对，关键证据与底稿索引一致。', gap: '供应商工商变更信息的核查覆盖近 6 个月，建议扩展至 12 个月，并补充关联方变更留痕。' },
+        zhang: { good: '抽样方法与审计目标匹配，证据来源、访谈记录及凭证影像均保留完整索引。', gap: '对于口头访谈结论，尚缺少被访谈人签字确认，建议补齐访谈纪要确认页。' },
+        li: { good: '采购定价与合同审批环节的证据链完整，抽样的 12 笔大额合同均能回溯至审批单。', gap: '个别样本的验收记录仅保留扫描件，建议同步记录原件归档位置。' }
+      },
+      d2: {
+        me: { good: '问题描述均引用制度条款与凭证编号，责任主体界定清晰，结论与发现一一对应。', gap: '部分金额影响测算未披露关键假设，建议补充敏感性区间及测算口径说明。' },
+        wang: { good: '问题描述统一按照事实、制度依据、影响三个层次展开，定性结论与证据一一对应。', gap: '供应商准入问题的影响金额尚未拆分已发生与潜在敞口，建议补充口径说明。' },
+        zhang: { good: '关联方交易部分引用《企业内部控制应用指引》，制度依据与问题定性匹配。', gap: '金额测算未披露关键假设，建议补充敏感性区间及测算口径。' },
+        li: { good: '问题编号与底稿索引一一对应，重要结论均有两项以上独立证据支撑。', gap: '部分定性表述偏结论化，建议补充与业务部门的确认记录，降低争议。' }
+      },
+      d3: {
+        me: { good: '', gap: '' },
+        wang: { good: '管理建议覆盖准入、穿透核查和合同履约三个关键控制点，可执行性较强。', gap: '建议明确整改责任岗位、完成时限和验收标准，便于后续跟踪闭环。' },
+        zhang: { good: '建议与问题发现对应关系清晰，能够支撑管理层快速决策。', gap: '缺少分阶段实施优先级，建议按高风险事项先行整改。' },
+        li: { good: '', gap: '' }
+      }
+    };
+
+    let toastTimer;
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    function openPanel(tab = 'eval') {
+      state.panelOpen = true;
+      document.getElementById('sidecar').classList.remove('closed');
+      document.getElementById('collabFab').classList.remove('show');
+      switchTab(tab);
+      updateHostActions();
+    }
+
+    function closePanel() {
+      state.panelOpen = false;
+      document.getElementById('sidecar').classList.add('closed');
+      document.getElementById('collabFab').classList.add('show');
+      updateHostActions();
+    }
+
+    function switchTab(tab) {
+      state.panel = tab;
+      document.querySelectorAll('.sidecar-tab[data-tab]').forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', String(active));
+      });
+      document.getElementById('evalPane').classList.toggle('active', tab === 'eval');
+      document.getElementById('commentPane').classList.toggle('active', tab === 'comment');
+      updateHostActions();
+      if (tab === 'comment') {
+        document.querySelector('.comment-scroll').scrollTop = 0;
+        setTimeout(() => document.getElementById('commentInput').focus(), 30);
+      }
+    }
+
+    function updateHostActions() {
+      const evalOpen = state.panelOpen && state.panel === 'eval';
+      const commentOpen = state.panelOpen && state.panel === 'comment';
+      document.getElementById('openEvalBtn').classList.toggle('active', evalOpen);
+      document.getElementById('openCommentBtn').classList.toggle('active', commentOpen);
+    }
+
+    function toggleDimension(head) {
+      const card = head.closest('.dimension-card');
+      const open = !card.classList.contains('open');
+      card.classList.toggle('open', open);
+      head.setAttribute('aria-expanded', String(open));
+    }
+
+    document.querySelectorAll('.dimension-head').forEach(head => {
+      head.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleDimension(head);
+        }
+      });
+    });
+
+    document.getElementById('dimensionList').addEventListener('click', event => {
+      const tab = event.target.closest('.person-tab');
+      if (!tab) return;
+      const card = tab.closest('.dimension-card');
+      selectReviewer(card, tab.dataset.reviewer);
+    });
+
+    document.addEventListener('input', event => {
+      const field = event.target.closest('.field-editor');
+      if (!field) return;
+      const card = field.closest('.dimension-card');
+      if (!card || card.dataset.viewer !== 'me') return;
+      reviewData[card.dataset.dimension].me[field.dataset.field] = field.innerText.trim();
+      resetConfirmButton(card);
+      updateProgress();
+    });
+
+    function resetConfirmButton(card) {
+      const button = card.querySelector('.confirm-eval');
+      if (!button) return;
+      clearTimeout(button.confirmTimer);
+      button.classList.remove('confirmed');
+      button.textContent = '确定';
+    }
+
+    function confirmDimension(button) {
+      const card = button.closest('.dimension-card');
+      const data = reviewData[card.dataset.dimension]?.me;
+      if (!isComplete(data)) {
+        toast('请补充完整的亮点与不足后再确定');
+        return;
+      }
+      button.classList.add('confirmed');
+      button.textContent = '已确定';
+      toast('本维度评估已确定');
+    }
+
+    function isComplete(data) {
+      return Boolean(data && data.good.trim().length > 3 && data.gap.trim().length > 3);
+    }
+
+    function updatePersonTabs(card) {
+      const dimension = card.dataset.dimension;
+      card.querySelectorAll('.person-tab').forEach(tab => {
+        const data = reviewData[dimension][tab.dataset.reviewer];
+        tab.classList.toggle('done', isComplete(data));
+      });
+    }
+
+    function updateProgress() {
+      const cards = Array.from(document.querySelectorAll('#dimensionList .dimension-card'));
+      cards.forEach(card => {
+        const data = reviewData[card.dataset.dimension].me;
+        const filled = [data.good, data.gap].filter(value => value.trim().length > 3).length;
+        const status = card.querySelector('.dimension-status');
+        card.dataset.status = filled === 2 ? 'done' : filled > 0 ? 'doing' : 'empty';
+        if (filled === 2) {
+          status.className = 'dimension-status done';
+          status.textContent = '已完成';
+        } else if (filled > 0) {
+          status.className = 'dimension-status doing';
+          status.textContent = '进行中';
+        } else {
+          status.className = 'dimension-status';
+          status.textContent = '待填写';
+        }
+        updatePersonTabs(card);
+        if (card.dataset.viewer === 'me') {
+          const done = isComplete(data);
+          const confirmBtn = card.querySelector('.confirm-eval');
+          if (confirmBtn) confirmBtn.disabled = !done;
+        }
+      });
+    }
+
+    function selectReviewer(card, personId) {
+      const dimension = card.dataset.dimension;
+      const reviewer = reviewers[personId];
+      const data = reviewData[dimension][personId];
+      if (!reviewer || !data) return;
+      const isMe = personId === 'me';
+      card.dataset.viewer = personId;
+      card.querySelectorAll('.person-tab').forEach(tab => {
+        const active = tab.dataset.reviewer === personId;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+      });
+      card.querySelectorAll('.field-editor').forEach(field => {
+        field.textContent = data[field.dataset.field] || '';
+        field.setAttribute('contenteditable', String(isMe));
+        field.classList.toggle('readonly', !isMe);
+      });
+      const done = isComplete(data);
+      const confirmBtn = card.querySelector('.confirm-eval');
+      if (confirmBtn) {
+        clearTimeout(confirmBtn.confirmTimer);
+        confirmBtn.classList.remove('confirmed');
+        confirmBtn.textContent = '确定';
+        confirmBtn.disabled = !done;
+      }
+    }
+
+    document.querySelector('.wps-close').addEventListener('click', () => {
+      toast('关闭 WPS 预览窗口，返回审计报告详情页');
+    });
+
+    function changeZoom(delta) {
+      state.zoom = Math.max(50, Math.min(120, state.zoom + delta));
+      document.getElementById('zoomValue').textContent = `${state.zoom}%`;
+      document.querySelectorAll('.paper-scroll, .canvas-footnote').forEach(el => { el.style.zoom = String(state.zoom / 100); });
+    }
+    function updateCommentCount() {
+      const visible = document.querySelectorAll('#commentFeed .comment-thread').length;
+      document.getElementById('emptyFeed').style.display = visible ? 'none' : 'block';
+    }
+
+    function toggleLike(button) {
+      const countEl = button.querySelector('.like-count');
+      let value = Number(countEl.textContent);
+      const liked = button.classList.toggle('liked');
+      value += liked ? 1 : -1;
+      countEl.textContent = String(Math.max(0, value));
+    }
+
+    document.addEventListener('click', event => {
+      const button = event.target.closest('.action-reply');
+      if (!button) return;
+      const thread = button.closest('.comment-thread');
+      const composer = thread.querySelector('.reply-composer');
+      const input = composer.querySelector('.reply-input');
+      const name = button.dataset.name || thread.querySelector('.comment-name').textContent.trim();
+      document.querySelectorAll('.reply-composer.show').forEach(el => { if (el !== composer) el.classList.remove('show'); });
+      composer.classList.add('show');
+      input.dataset.placeholder = `回复 ${name}…`;
+      input.dataset.replyTo = name;
+      setTimeout(() => input.focus(), 20);
+    });
+
+    function closeReply(button) {
+      const composer = button.closest('.reply-composer');
+      composer.classList.remove('show');
+      composer.querySelector('.reply-input').innerHTML = '';
+    }
+
+    function submitReply(button) {
+      const composer = button.closest('.reply-composer');
+      const input = composer.querySelector('.reply-input');
+      const text = input.innerText.trim();
+      if (!text) {
+        toast('请输入回复内容');
+        input.focus();
+        return;
+      }
+      const thread = composer.closest('.comment-thread');
+      let list = thread.querySelector('.reply-list');
+      if (!list) {
+        list = document.createElement('div');
+        list.className = 'reply-list';
+        composer.parentElement.insertBefore(list, composer);
+      }
+      const replyTo = input.dataset.replyTo || thread.querySelector('.comment-name').textContent.trim();
+      const item = document.createElement('div');
+      item.className = 'reply-item';
+      item.innerHTML = `
+        <div class="avatar avatar-24 av-blue">我</div>
+        <div class="reply-body">
+          <div class="reply-head"><span class="reply-name">周然（我）</span><span class="reply-to">回复 ${escapeHtml(replyTo)}</span><span class="reply-time">刚刚</span></div>
+          <p class="reply-text">${escapeHtml(text)}</p>
+          <div class="comment-actions">
+            <button class="comment-action action-reply" data-name="周然"><svg class="icon"><use href="#i-message"></use></svg> 回复</button>
+            <button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">0</span></button>
+          </div>
+        </div>`;
+      list.appendChild(item);
+      input.innerHTML = '';
+      composer.classList.remove('show');
+      toast('回复已发布');
+    }
+
+    const commentInput = document.getElementById('commentInput');
+    const publishBtn = document.getElementById('publishBtn');
+    commentInput.addEventListener('input', () => { publishBtn.disabled = !commentInput.innerText.trim(); });
+    commentInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        if (commentInput.innerText.trim()) publishComment();
+      }
+    });
+
+    function publishComment() {
+      const text = commentInput.innerText.trim();
+      if (!text) return;
+      const thread = document.createElement('article');
+      thread.className = 'comment-thread';
+      thread.dataset.target = 'report';
+      thread.innerHTML = `
+        <div class="comment-main">
+          <div class="avatar avatar-27 avatar-me">周</div>
+          <div class="comment-body">
+            <div class="comment-meta"><span class="comment-name">周然（我）</span><span class="comment-time">刚刚</span></div>
+            <p class="comment-text">${escapeHtml(text)}</p>
+            <div class="comment-actions"><button class="comment-action action-reply"><svg class="icon"><use href="#i-message"></use></svg> 回复</button><button class="comment-action action-like" onclick="toggleLike(this)"><svg class="icon"><use href="#i-thumb"></use></svg> <span class="like-count">0</span></button></div>
+            <div class="reply-composer"><div class="reply-input" contenteditable="true" spellcheck="false" data-placeholder="回复 周然…"></div><div class="reply-actions"><button class="reply-cancel" onclick="closeReply(this)">取消</button><button class="reply-send" onclick="submitReply(this)">发送</button></div></div>
+          </div>
+        </div>`;
+      const feed = document.getElementById('commentFeed');
+      feed.insertBefore(thread, feed.firstChild);
+      commentInput.innerHTML = '';
+      publishBtn.disabled = true;
+      updateCommentCount();
+      document.querySelector('.comment-scroll').scrollTop = 0;
+      toast('已发布报告评论');
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+    }
+
+    window.addEventListener('load', () => {
+      document.querySelectorAll('#dimensionList .dimension-card').forEach(card => selectReviewer(card, 'me'));
+      updateProgress();
+      updateCommentCount();
+      updateHostActions();
+    });
+  </script>
+</body>
+</html>
