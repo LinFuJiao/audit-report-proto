@@ -1767,9 +1767,18 @@ function closeModal(){
 }
 </script><script>
 /* ============ 表单：加载 / 保存 / 提交 ============ */
+function scrollContentTo(el, align){
+  const content = $('.content');
+  if (!el || !content) return;
+  const er = el.getBoundingClientRect();
+  const cr = content.getBoundingClientRect();
+  if (align === 'nearest' && er.top >= cr.top && er.bottom <= cr.bottom) return;
+  const top = Math.max(0, content.scrollTop + er.top - cr.top - 8);
+  if (content.scrollTo) content.scrollTo({ top, behavior:'smooth' });
+  else content.scrollTop = top;
+}
 function scrollToDetail(){
-  const el = $('#detailTabs');
-  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  scrollContentTo($('#detailTabs'), 'nearest');
 }
 function loadForm(p){
   form = p
@@ -1918,14 +1927,12 @@ function startProject(p){
 }
 function enterEffect(p){
   selectRow(p.id, true);
-  const el = $('#effWrap');
-  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  scrollContentTo($('#effWrap'));
   toast('已进入编辑状态：在【' + effName() + '】录入附件与明细，完成后点击「保存」或「保存并提交」');
 }
 function enterInner(p){
   selectRow(p.id, true);
-  const el = $('#innerWrap');
-  if (el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  scrollContentTo($('#innerWrap'));
   toast('已进入编辑状态：编辑【风险成效审批】后点击「保存」或「保存并提交」');
 }
 function askClose(p){
