@@ -522,7 +522,6 @@ table.lt.riskdetail td.riskamtvalue input{text-align:left}
         <table class="lt">
           <thead>
             <tr>
-              <th class="ck"><input type="checkbox" id="ckAllList"></th>
               <th>序号</th>
               <th>状态</th>
               <th>项目编号</th>
@@ -1100,7 +1099,6 @@ function renderList(){
       ops.push('<button class="lnk" data-op="reopen" data-id="'+p.id+'">取消关闭</button>');
     }
     return '<tr data-rowid="'+p.id+'"'+(selId===p.id?' class="sel"':'')+'>'
-      + '<td class="ck"><input type="checkbox" data-rowck="'+p.id+'"></td>'
       + '<td>'+(i+1)+'</td>'
       + '<td><span class="st '+st.cls+'">'+st.label+'</span></td>'
       + '<td>'+p.code+'</td>'
@@ -1112,7 +1110,7 @@ function renderList(){
       + '<td>'+((p.members||[]).join('、') || '—')+'</td>'
       + '<td style="white-space:nowrap">'+ops.join('')+'</td>'
       + '</tr>';
-  }).join('') || '<tr><td colspan="11" style="text-align:center;padding:30px;color:#909399">暂无数据</td></tr>';
+  }).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;color:#909399">暂无数据</td></tr>';
   $('#pageInfo').textContent = '共 '+rows.length+' 条';
   renderTabs();
 }
@@ -1993,8 +1991,6 @@ function bindAll(){
   $('#fFieldKw').oninput = renderList;
   $('#fKw').oninput = renderList;
   $('#btnNew').onclick = () => openForm(null);
-  $('#ckAllList').onclick = e => $$('#listBody [data-rowck]').forEach(c => c.checked = e.target.checked);
-
   /* 列表：点击行 = 选中并展示该项目信息；点击操作按钮 = 执行操作 */
   $('#listBody').onclick = e => {
     const btn = e.target.closest('[data-op]');
