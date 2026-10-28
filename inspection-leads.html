@@ -480,6 +480,7 @@ table.lt.boardtable tbody tr[data-boardid]{cursor:pointer}
 .cf-actions{grid-column:span 2;display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .case-timeline{padding:0 16px}
 .case-listbar{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px 16px;min-height:28px;margin-bottom:6px;font-size:10.5px;color:#8c959f}
+.case-list-title{margin-right:auto;font-size:14px;font-weight:600;line-height:1.4;color:#303133;white-space:nowrap}
 .case-list-sort{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 .case-list-sort-label{white-space:nowrap}
 .case-tablewrap{overflow-x:auto;border:1px solid #e7ebf0;border-radius:4px;background:#fff}
@@ -619,7 +620,7 @@ table.lt.chgtb{min-width:0}
   .frow>label{flex-basis:92px}
 }
 @media (max-width:900px) and (min-width:621px){
-  .formgrid>.frow:has(input[type="datetime-local"]){grid-column:span 2}
+  .formgrid>.frow:has(input[type="date"]){grid-column:span 2}
 }
 @media (max-width:620px){
   .info-grid,.formgrid,.analysis-detail-meta{grid-template-columns:minmax(0,1fr)}
@@ -689,9 +690,9 @@ table.lt.chgtb{min-width:0}
           <div class="tablewrap leadtablewrap">
             <table class="lt listtable">
               <thead><tr>
-                <th style="width:3.2%">序号</th><th style="width:9%">状态</th><th style="width:12.5%">线索编号</th><th>线索标题</th>
-                <th style="width:10%">线索类型</th><th style="width:11%">承接业务单元</th><th style="width:11%">线索所属单位</th>
-                <th style="width:9%">操作</th>
+                <th style="width:3.2%">序号</th><th style="width:8.5%">状态</th><th style="width:11.5%">线索编号</th><th>线索标题</th>
+                <th style="width:9.5%">线索类型</th><th style="width:10.5%">承接业务单元</th><th style="width:10.5%">线索所属单位</th>
+                <th style="width:9%">推送类型</th><th style="width:8.5%">操作</th>
               </tr></thead>
               <tbody id="listBody"></tbody>
             </table>
@@ -752,6 +753,7 @@ const uniq = (arr) => Array.from(new Set(arr));
 const pad2 = (n) => String(n).padStart(2, '0');
 const fmtDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const fmtDay = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const dateOnly = (v) => String(v || '').slice(0, 10);
 const parseDT = (s) => s ? new Date(String(s).replace(' ', 'T')) : null;
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const todayDate = () => fmtDay(new Date());
@@ -825,11 +827,17 @@ const STATUS_STYLE = {
 };
 const statusTag = (s) => `<span class="tag ${STATUS_STYLE[s] || 'gray'}">${esc(s)}</span>`;
 const plainStatus = (s) => `<span class="status-text">${esc(s)}</span>`;
+const leadPushType = (l) => {
+  if (!l) return '';
+  if (l.pushType) return l.pushType;
+  if (l.origin !== 'OA') return '';
+  return l.sourceData && l.sourceData.complaintCategory === '廉洁从业' ? '舞弊类' : '管理类';
+};
 
 const logAt = (time, user, action, result) => ({ time, user, action, result });
 const mkLead = (o) => Object.assign({
   id: 0, code: '', title: '', summary: '', type: '投诉线索', sourceUnit: '', receivedAt: '',
-  businessUnit: '', ownerUnit: CURRENT_DEPT, creator: CURRENT_USER,
+  businessUnit: '', ownerUnit: CURRENT_DEPT, creator: CURRENT_USER, pushType: '',
   preAssignees: [], analysts: [], deadline: '',
   involve: [], reporterType: '匿名', reporterName: '—', reporterPhone: '—',
   partnerType: '无', partnerName: '—', attachments: [], sourceData: {},
@@ -893,7 +901,7 @@ const leads = [
       { name: '投诉材料.zip', size: 5033165, fromOa: true }
     ],
     sourceData: { oaFlowNo: 'OA-TS-2026-0192', complaintChannel: 'OA转办', complaintCategory: '廉洁从业' },
-    origin: 'OA', oaRole: '业务转办', status: '预分析中', createdAt: day(-2, '09:20'), assignedAt: day(-2, '10:05'),
+    pushType: '舞弊类', origin: 'OA', oaRole: '业务转办', status: '预分析中', createdAt: day(-2, '09:20'), assignedAt: day(-2, '10:05'),
     logs: [
       logAt(day(-2, '09:20'), '系统', 'OA推送线索', '来源：集团纪检监察组'),
       logAt(day(-2, '09:20'), '系统', '自动填入预分析分配人员', 'OA转办对象：李进'),
@@ -980,7 +988,7 @@ const leads = [
     partnerType: '承运商', partnerName: '恒通物流有限公司',
     attachments: [{ name: 'OA转办单.pdf', size: 942080, fromOa: true }],
     sourceData: { oaFlowNo: 'OA-TS-2026-0178', complaintChannel: 'OA转办', complaintCategory: '违规经营' },
-    origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-20, '08:50'), decisionAt: day(-20, '08:50'),
+    pushType: '管理类', origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-20, '08:50'), decisionAt: day(-20, '08:50'),
     investigation: {
       conclusion: '经调取承运商准入资料、比价记录及合同审批流程，本次新增承运商已履行询价程序，但比价资料归档不完整，未发现利益输送或违规确定承运商的情形。\n\n针对资料归档问题，已提示业务单位补充完整比价过程记录，并将承运商准入资料纳入后续监督检查范围。',
       summary: '调查确认本次承运商选择已履行询价程序，未发现利益输送问题；存在比价资料归档不完整的管理缺陷，已提示补充完善。',
@@ -1032,7 +1040,7 @@ const leads = [
       { name: '招标文件.pdf', size: 6501171, fromOa: true }
     ],
     sourceData: { oaFlowNo: 'OA-TS-2026-0172', complaintChannel: 'OA转办', complaintCategory: '违规经营' },
-    origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-12, '16:30'), decisionAt: day(-12, '16:30'),
+    pushType: '管理类', origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-12, '16:30'), decisionAt: day(-12, '16:30'),
     logs: [
       logAt(day(-12, '16:30'), '系统', 'OA归档线索转入', '职能部门线索，仅查阅'),
       logAt(day(-12, '16:30'), '系统', '设置默认信息', '线索录入人员：李进；承接业务单元：总部审计部监察')
@@ -1049,7 +1057,7 @@ const leads = [
     partnerType: '承包商', partnerName: '华建工程有限公司',
     attachments: [{ name: 'OA转办单.pdf', size: 1153433, fromOa: true }, { name: '签证变更清单.xlsx', size: 954204 }],
     sourceData: { oaFlowNo: 'OA-TS-2026-0151', complaintChannel: 'OA转办', complaintCategory: '违规经营' },
-    origin: 'OA', oaRole: '业务转办', status: '已立项', createdAt: day(-32, '09:10'), assignedAt: day(-32, '10:00'),
+    pushType: '舞弊类', origin: 'OA', oaRole: '业务转办', status: '已立项', createdAt: day(-32, '09:10'), assignedAt: day(-32, '10:00'),
     analysisDoneAt: day(-24, '10:30'), decisionAt: day(-23, '09:15'), projectId: 1,
     investigation: {
       conclusion: '经对签证变更审批资料、工程量计算书及现场施工记录进行核查，发现部分签证变更存在审批链条不完整、工程量计算依据不足等问题，涉及金额约128.60万元。\n\n上述问题反映出项目过程管控和变更审批执行不到位，建议立项开展专项调查，进一步核实工程量真实性及相关人员责任。',
@@ -1427,8 +1435,9 @@ function renderList() {
       <td class="type-cell">${esc(l.type)}</td>
       <td class="owner-cell">${esc(l.ownerUnit)}</td>
       <td class="owner-cell">${esc(l.businessUnit)}</td>
+      <td>${esc(leadPushType(l) || '—')}</td>
       <td class="ops">${opsFor(l)}</td>
-    </tr>`).join('') : `<tr class="emptyrow"><td colspan="8">暂无线索</td></tr>`;
+    </tr>`).join('') : `<tr class="emptyrow"><td colspan="9">暂无线索</td></tr>`;
 
   renderPager(all.length);
 }
@@ -1602,7 +1611,8 @@ function renderInfoPane(l) {
       ${infoRow('线索编号', esc(l.code))}
       ${infoRow('线索类型', esc(l.type))}
       ${infoRow('线索来源业务单元', esc(l.sourceUnit))}
-      ${infoRow('线索接收时间', esc(l.receivedAt))}
+      ${infoRow('线索接收时间', esc(dateOnly(l.receivedAt)))}
+      ${infoRow('推送类型', esc(leadPushType(l)))}
       ${infoRow('线索录入人员', esc(l.creator))}
       ${infoRow('承接业务单元', esc(l.ownerUnit))}
       ${infoRow('线索所属单位', esc(l.businessUnit))}
@@ -2717,14 +2727,15 @@ function renderCaseBoard() {
     const desc = activeField && state.caseQuery.sortDir === 'desc';
     return `<span class="case-list-sort"><span class="case-list-sort-label">${item.label}</span><span class="case-sort-arrows"><button type="button" class="case-sort-arrow ${asc ? 'active' : ''}" data-case-sort-field="${item.key}" data-case-sort-dir="asc" title="${item.label}升序" aria-label="${item.label}升序">${upArrow}</button><button type="button" class="case-sort-arrow ${desc ? 'active' : ''}" data-case-sort-field="${item.key}" data-case-sort-dir="desc" title="${item.label}降序" aria-label="${item.label}降序">${downArrow}</button></span></span>`;
   }).join('');
-  const table = list.length ? `<div class="case-listbar">${sortControls}</div>
+  const listHeader = `<div class="case-listbar"><span class="case-list-title">案件明细</span>${list.length ? sortControls : ''}</div>`;
+  const table = list.length ? `${listHeader}
     <div class="case-tablewrap">
     <table class="case-table">
       <colgroup><col style="width:42px"><col style="width:190px"><col style="width:78px"><col style="width:92px"><col style="width:122px"><col style="width:104px"><col style="width:88px"><col style="width:92px"><col style="width:332px"></colgroup>
       <thead><tr><th>序号</th><th>案件名称</th><th>案件类型</th><th>办案主体</th><th>问题所属单位</th><th>业务单元</th><th>案件来源</th><th>案件状态</th><th>办理时间轴</th></tr></thead>
       <tbody>${bodyRows}</tbody>
     </table>
-  </div>${casePagerHtml(list.length)}` : '<div class="case-empty">暂无符合条件的案件</div>';
+  </div>${casePagerHtml(list.length)}` : `${listHeader}<div class="case-empty">暂无符合条件的案件</div>`;
   $('#caseTimeline').innerHTML = table;
 }
 
@@ -3381,8 +3392,8 @@ function startLeadEdit(lead) {
 
 function leadEditFormHtml(lead, isNew) {
   const d = lead || {
-    type: '投诉线索', sourceUnit: '', receivedAt: nowStr().slice(0, 10) + ' 09:00',
-    title: '', summary: '', businessUnit: '', ownerUnit: CURRENT_DEPT, creator: CURRENT_USER,
+    type: '投诉线索', sourceUnit: '', receivedAt: todayDate(),
+    title: '', summary: '', businessUnit: '', ownerUnit: CURRENT_DEPT, creator: CURRENT_USER, pushType: '',
     involve: [], reporterType: '匿名',
     reporterName: '', reporterPhone: '', partnerType: '无', partnerName: '', attachments: [], sourceData: {}
   };
@@ -3408,10 +3419,11 @@ function leadEditFormHtml(lead, isNew) {
         <textarea class="ctl${readCls}" id="lfSummary" maxlength="2000" placeholder="请输入线索摘要"${readAttr}>${esc(d.summary)}</textarea>
         <span class="ta-count" id="lfSummaryCount">${String(d.summary || '').length}/2000</span>
       </div></div>
-      <div class="frow"><label class="req">线索接收时间</label><div class="fctl"><input class="ctl${readCls}" id="lfReceived" type="datetime-local" value="${esc(String(d.receivedAt).replace(' ', 'T'))}"${readAttr}></div></div>
+      <div class="frow"><label class="req">线索接收时间</label><div class="fctl"><input class="ctl${readCls}" id="lfReceived" type="date" value="${esc(dateOnly(d.receivedAt))}"${readAttr}></div></div>
       <div class="frow"><label class="req">线索所属单位</label><div class="fctl"><input class="ctl${readCls}" id="lfBusinessUnit" value="${esc(d.businessUnit)}"${readAttr}></div></div>
       <div class="frow"><label class="req">线索来源业务单元</label><div class="fctl"><input class="ctl${readCls}" id="lfSourceUnit" value="${esc(d.sourceUnit)}"${readAttr}></div></div>
       <div class="frow"><label class="req">承接业务单元</label><div class="fctl"><input class="ctl${readCls}" id="lfOwnerUnit" value="${esc(d.ownerUnit)}"${readAttr}></div></div>
+      <div class="frow"><label>推送类型</label><div class="fctl"><input class="ctl ro" id="lfPushType" value="${esc(leadPushType(d))}" placeholder="OA推送线索自动带入" title="OA推送线索由系统自动带入" readonly></div></div>
       <div class="frow"><label>线索录入人员</label><div class="fctl"><input class="ctl ro" id="lfCreator" value="${esc(RO ? (d.creator || CURRENT_USER) : CURRENT_USER)}" title="由系统根据登录用户自动填充" readonly></div></div>
     </div>
     <div class="sectmini">涉及人员</div>
@@ -3590,11 +3602,12 @@ function collectLeadForm(lead) {
   return {
     type: field('lfType').value,
     sourceUnit: field('lfSourceUnit').value.trim(),
-    receivedAt: (field('lfReceived').value || '').replace('T', ' '),
+    receivedAt: field('lfReceived').value || '',
     title: field('lfTitle').value.trim(),
     summary: field('lfSummary').value.trim(),
     businessUnit: field('lfBusinessUnit').value.trim(),
     ownerUnit: field('lfOwnerUnit').value.trim(),
+    pushType: field('lfPushType').value.trim(),
     creator: CURRENT_USER,
     involve,
     reporterType: field('lfReporterType').value,
@@ -3697,8 +3710,9 @@ function openOaModal() {
       <div class="sectmini">线索信息</div>
       <div class="info-grid two">
         ${infoRow('线索类型', '投诉线索')}
+        ${infoRow('推送类型', '舞弊类')}
         ${infoRow('线索来源业务单元', '集团纪检监察组')}
-        ${infoRow('线索接收时间', nowStr())}
+        ${infoRow('线索接收时间', todayDate())}
         ${infoRow('线索所属单位', '乳品事业部华北区域')}
         ${infoRow('线索标题', esc(oaTitle), true)}
         ${infoRow('线索摘要', esc(oaSummary), true)}
@@ -3724,8 +3738,8 @@ function openOaModal() {
     const deadline = isFunc ? '' : (($('#oaDeadline') || {}).value || dday(5));
     const item = mkLead({
       id, code: nextLeadCode(true), title: oaTitle, summary: oaSummary, type: '投诉线索',
-      sourceUnit: '集团纪检监察组', receivedAt: now, businessUnit: '乳品事业部华北区域',
-      ownerUnit: '总部审计部监察', creator: '李进',
+      sourceUnit: '集团纪检监察组', receivedAt: todayDate(), businessUnit: '乳品事业部华北区域',
+      ownerUnit: '总部审计部监察', creator: '李进', pushType: '舞弊类',
       preAssignees: isFunc ? [] : ['李进'], analysts: [], deadline,
       involve: [{ name: '张某某', personId: 'Y130772', post: '采购主管' }],
       reporterType: '匿名', reporterName: '—', reporterPhone: '—',
