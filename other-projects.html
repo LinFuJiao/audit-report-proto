@@ -2245,5 +2245,63 @@ function bindAll(){
   renderList(); renderForm(); renderChange(); bindAll();
 })();
 </script>
+<script>
+/* 墨刀 iframe 内原生 select 下拉会被外层遮挡，改为页面内自绘下拉 */
+(function(){
+  const style = document.createElement('style');
+  style.textContent = '.csel-pop{position:fixed;z-index:2147483000;background:#fff;border:1px solid #dcdfe6;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:4px 0;overflow-y:auto;font-size:12.5px;color:#303133;user-select:none}'
+    + '.csel-pop .opt{padding:8px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.csel-pop .opt:hover{background:#f2f7fd}'
+    + '.csel-pop .opt.on{color:#1e6fbf;background:#eaf3fb;font-weight:600}';
+  document.head.appendChild(style);
+  let pop = null, owner = null;
+  function close(){ if (pop){ pop.remove(); pop = null; } owner = null; }
+  function open(target){
+    close();
+    owner = target;
+    const r = target.getBoundingClientRect();
+    const width = Math.max(r.width, 150);
+    pop = document.createElement('div');
+    pop.className = 'csel-pop';
+    pop.style.width = width + 'px';
+    pop.style.left = Math.max(6, Math.min(r.left, window.innerWidth - width - 6)) + 'px';
+    const below = window.innerHeight - r.bottom - 8;
+    const above = r.top - 8;
+    if (below >= 140 || below >= above){
+      pop.style.top = (r.bottom + 2) + 'px';
+      pop.style.maxHeight = Math.min(280, Math.max(90, below)) + 'px';
+    } else {
+      pop.style.bottom = (window.innerHeight - r.top + 2) + 'px';
+      pop.style.maxHeight = Math.min(280, Math.max(90, above)) + 'px';
+    }
+    Array.prototype.forEach.call(target.options, (opt, i) => {
+      const item = document.createElement('div');
+      item.className = 'opt' + (i === target.selectedIndex ? ' on' : '');
+      item.textContent = opt.textContent;
+      item.addEventListener('mousedown', ev => ev.preventDefault());
+      item.addEventListener('click', () => {
+        target.selectedIndex = i;
+        target.dispatchEvent(new Event('change', { bubbles:true }));
+        close();
+      });
+      pop.appendChild(item);
+    });
+    document.body.appendChild(pop);
+  }
+  document.addEventListener('mousedown', e => {
+    const sel = e.target.closest && e.target.closest('select');
+    if (sel && !sel.disabled && !sel.multiple){
+      e.preventDefault();
+      if (owner === sel){ close(); return; }
+      open(sel);
+      return;
+    }
+    if (pop && !pop.contains(e.target)) close();
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  window.addEventListener('resize', close);
+  window.addEventListener('scroll', close, true);
+})();
+</script>
 </body>
 </html>
