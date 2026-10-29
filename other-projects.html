@@ -384,7 +384,7 @@ table.lt.chgtb{min-width:0}
 #chgInfoBody tr[data-ci]{cursor:pointer}
 #chgInfoBody tr[data-ci]:hover td{background:#F5F9FD}
 #chgInfoBody tr.selrow td,#chgInfoBody tr.selrow:hover td{background:#C2D6E9}
-/* 变更记录：项目组员为多人选择控件（点选人名，无需手动输入分隔符） */
+/* 变更记录：项目成员为多人选择控件（点选人名，无需手动输入分隔符） */
 #chgRecBody .pickwrap{gap:6px}
 #chgRecBody .pickbox{min-height:34px;height:auto;max-height:104px;overflow:auto;background:#fff;border-color:#E4E7ED;border-radius:2px}
 #chgRecBody .pickwrap .iconbtn{flex:0 0 34px;width:34px;height:34px;font-size:13px}
@@ -511,7 +511,7 @@ table.lt.riskdetail td.riskamtvalue input{text-align:left}
           <option value="type">项目类型</option>
           <option value="name">项目名称</option>
           <option value="owner">项目负责人</option>
-          <option value="members">项目组员</option>
+          <option value="members">项目成员</option>
         </select>
         <input class="ctl" id="fFieldKw" placeholder="精准搜索" style="width:138px">
         <input class="ctl" id="fKw" placeholder="模糊搜索" style="width:138px">
@@ -530,7 +530,7 @@ table.lt.riskdetail td.riskamtvalue input{text-align:left}
               <th>项目分类</th>
               <th>所属年月</th>
               <th>项目负责人</th>
-              <th>项目组员</th>
+              <th>项目成员</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -682,7 +682,7 @@ const F = {
   sub   : (w) => ({ k:'subType', label:'项目分类', type:'select', dict:'subTypes', req:1, w:w||1 }),
   month : (w,l) => ({ k: l==='所属月份'?'month2':'month', label:l||'所属年月', type:'month', req:1, w:w||1 }),
   owner : (w) => ({ k:'owner',   label:'项目负责人', type:'person', req:1, w:w||1 }),
-  members:(w)=> ({ k:'members', label:'项目组员', type:'multi', w:w||1 }),
+  members:(w)=> ({ k:'members', label:'项目成员', type:'multi', w:w||1 }),
   amount: (w) => ({ k:'amount',  label:'报审金额', type:'money', unit:'元', req:1, w:w||1 }),
   money : (k,label,w) => ({ k, label, type:'money', unit:'元', w:w||1 }),
   bids  : (w) => ({ k:'bids', label:'投标单位 / 投标金额', type:'bids', w:w||3 }),
@@ -793,7 +793,7 @@ const TYPES = [
             {k:'buildUnit',label:'建设单位',type:'text',w:1},
             {k:'buildOwner',label:'建设单位项目负责人',type:'text',w:1},
             {k:'owner',label:'项目负责人',type:'person',req:1,w:1},
-            {k:'members',label:'项目组员',type:'multi',w:1}],
+            {k:'members',label:'项目成员',type:'multi',w:1}],
     attaches:['图纸','签证','合同','招标清单','上报预算','界限划分/施工节点','其他'],
     summary:[{k:'amountSum',label:'报审金额合计',unit:'元',red:1}],
     inner: INNER_DETAIL,
@@ -839,7 +839,7 @@ const effName = () => form && form.typeKey === 'FX' ? '业务报告审批' : '�
 const CHANGE_FIELDS = [
   { k:'name',    label:'项目名称',   type:'text' },
   { k:'owner',   label:'项目负责人', type:'person' },
-  { k:'members', label:'项目组员',   type:'multi' },
+  { k:'members', label:'项目成员',   type:'multi' },
   { k:'amount',  label:'报审金额（元）', type:'money' }
 ];
 const hasField = (t, k) => !!t && (t.fields||[]).some(f => f.k === k);
@@ -890,8 +890,8 @@ const projects = [
             {person:'郑宏',indicator:'挽损',scope:'阀门及法兰件',advice:'统一材质等级后重新询价',related:420000,adopted:210000}],
     changes:[{time:'2026-10-15 10:20', by:'林福娇', reason:'材料价格随行情调整，报审金额同步修正',
       items:[{k:'amount',label:'报审金额（元）',from:'3,000,000.00',to:'3,200,000.00'}], state:'已通过'},
-      {time:'2026-10-15 14:05', by:'林福娇', reason:'补充项目组员',
-      items:[{k:'members',label:'项目组员',from:'侯名伟',to:'侯名伟、郑宏'}], state:'已通过'}],
+      {time:'2026-10-15 14:05', by:'林福娇', reason:'补充项目成员',
+      items:[{k:'members',label:'项目成员',from:'侯名伟',to:'侯名伟、郑宏'}], state:'已通过'}],
     files:[{name:'清标报告-烧结机除尘.docx', size:246784, uploader:'侯名伟', time:'2026-10-14 09:32', cat:'清标报告'},
       {name:'招标文件（定稿）.pdf', size:3152896, uploader:'郑宏', time:'2026-10-14 10:05', cat:'招标文件'},
       {name:'投标文件-甲供材料.zip', size:8912896, uploader:'郑宏', time:'2026-10-15 14:40', cat:'投标文件'}],
@@ -920,8 +920,8 @@ const projects = [
     detail:[{editor:'周楠',reviewer:'鹿智慧',checker:'侯名伟',indicator:'风险控制',content:'签证工程量与清单量差异',risk:1800000,adopted:600000}],
     changes:[{time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'报审金额按实收方校正', state:'已通过',
       items:[{k:'amount',label:'报审金额（元）',from:'1,650,000.00',to:'1,800,000.00'}]},
-      {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'补充项目组员', state:'已通过',
-      items:[{k:'members',label:'项目组员',from:'周楠',to:'周楠、李进'}]},
+      {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'补充项目成员', state:'已通过',
+      items:[{k:'members',label:'项目成员',from:'周楠',to:'周楠、李进'}]},
       {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'负责人变更', state:'已通过',
       items:[{k:'owner',label:'项目负责人',from:'鹿智慧',to:'周楠'}]},
       {time:'2026-09-15 09:20', by:'宁子钧 nzj-qb', reason:'项目名称规范', state:'已通过',
@@ -985,7 +985,7 @@ function chip(name, removable, key){
 }
 const PEOPLE = ['侯名伟','郑宏','鹿智慧','周楠','李进','赵婷婷','林福娇'];
 
-/* 变更单里的「项目组员」：多人选择（存为顿号分隔的名单，控件内直接点选人名） */
+/* 变更单里的「项目成员」：多人选择（存为顿号分隔的名单，控件内直接点选人名） */
 function chgMemItem(){ return ((chg && chg.items) || []).find(x => x.k === 'members'); }
 function chgMemList(){
   const it = chgMemItem();
@@ -1265,6 +1265,10 @@ function renderStatus(){
 function renderActions(){
   const bE = $('#btnEdit'), bS = $('#btnSave'), bT = $('#btnSubmit'), lS = $('#saveLb'), lT = $('#submitLb');
   if (!bE || !bS || !bT) return;
+  const activePane = $('#detailTabs .t2.on');
+  if (activePane && activePane.dataset.pane === 'change'){
+    bE.style.display = 'none'; bS.style.display = 'none'; bT.style.display = 'none'; return;
+  }
   const s = form.status, has = !!form.id;
   if (s === 'closed' || stageOf(s).appr || (s === 'running' && effDone() && innerDone())){
     bE.style.display = 'none'; bS.style.display = 'none'; bT.style.display = 'none'; return;
@@ -1606,6 +1610,7 @@ function switchPane(name){
   }
   $$('#detailTabs .t2').forEach(b => b.classList.toggle('on', b.dataset.pane === name));
   $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + name));
+  renderActions();
 }
 </script><script>
 /* ============ 项目变更（变更信息 + 变更记录） ============ */
