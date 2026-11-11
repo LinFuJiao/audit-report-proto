@@ -64,6 +64,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft
 .texttabs button.on{color:var(--navy);font-weight:600}
 .spacer{flex:1 1 auto}
 .ctl{height:34px;border:1px solid #e4e7ed;border-radius:4px;padding:0 10px;font-size:12.5px;font-family:inherit;outline:none;background:#fff;color:var(--text);min-width:0}
+#fKw{padding-right:34px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23606266' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-4.2-4.2'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:16px 16px}
 .ctl:focus{border-color:#a9c7ea;box-shadow:0 0 0 2px rgba(47,127,208,.07)}
 select.ctl{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2386909c'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
 .btn{height:34px;padding:0 14px;border-radius:3px;border:1px solid #e4e7ed;background:#fff;font-size:12.5px;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
@@ -672,10 +673,10 @@ table.lt.chgtb{min-width:0}
               <button data-status="草稿">草稿</button>
               <button data-status="已立项">已立项</button>
               <button data-status="已结项">已结项</button>
-              <button data-status="仅查阅">仅查阅</button>
             </div>
             <span class="spacer"></span>
-            <select class="ctl" id="fPreciseField" style="width:120px" title="选择精准搜索字段">
+            <input class="ctl" id="fKw" placeholder="请输入关键词模糊搜索" style="width:218px">
+            <select class="ctl" id="fPreciseField" style="width:110px" title="选择精准搜索字段">
               <option value="">精准搜索</option>
               <option value="code">线索编号</option>
               <option value="status">状态</option>
@@ -684,9 +685,8 @@ table.lt.chgtb{min-width:0}
               <option value="ownerUnit">承接业务单元</option>
               <option value="businessUnit">线索所属单位</option>
             </select>
-            <input class="ctl" id="fPreciseKw" placeholder="精准搜索" style="width:148px">
-            <input class="ctl" id="fKw" placeholder="请输入关键词进行全局模糊搜索" style="width:218px">
-            <button class="btn navy" id="btnNew">新增</button><button class="btn" id="btnExport">导出</button>
+            <input class="ctl" id="fPreciseKw" placeholder="精准搜索" style="width:134px">
+            <button class="btn navy" id="btnNew">新增</button><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnImport">导入</button><button class="btn" id="btnExport">导出</button>
           </div>
           <div class="tablewrap leadtablewrap">
             <table class="lt listtable">
@@ -824,7 +824,7 @@ const PEOPLE = [
 ];
 
 const STATUS_STYLE = {
-  '草稿':'orange', '已立项':'green', '已结项':'gray', '仅查阅':'lock',
+  '草稿':'orange', '已立项':'green', '已结项':'gray',
   '正在执行':'blue', '已关闭':'gray'
 };
 const statusTag = (s) => `<span class="tag ${STATUS_STYLE[s] || 'gray'}">${esc(s)}</span>`;
@@ -832,11 +832,13 @@ const plainStatus = (s) => `<span class="status-text">${esc(s)}</span>`;
 const leadPushType = (l) => {
   if (!l) return '';
   if (l.pushType) return l.pushType;
-  if (l.origin !== 'OA') return '';
-  return l.sourceData && l.sourceData.complaintCategory === '廉洁从业' ? '舞弊类' : '管理类';
+  if (l.origin === '手动') return '管理类';
+  if (l.origin === 'OA' || l.origin === '导入') return '舞弊类';
+  return '';
 };
-const leadDispatchLabel = (l) => leadPushType(l) === '管理类' ? '转办对象' : '承接业务单元';
-const leadDispatchValue = (l) => !l ? '' : (leadPushType(l) === '管理类' ? (l.transferTo || '') : (l.ownerUnit || ''));
+const leadUsesTransfer = (l) => !!l && l.origin === '导入';
+const leadDispatchLabel = (l) => leadUsesTransfer(l) ? '转办对象' : '承接业务单元';
+const leadDispatchValue = (l) => !l ? '' : (leadUsesTransfer(l) ? (l.transferTo || l.ownerUnit || '') : (l.ownerUnit || ''));
 
 const logAt = (time, user, action, result) => ({ time, user, action, result });
 const mkLead = (o) => Object.assign({
@@ -853,6 +855,57 @@ const mkLead = (o) => Object.assign({
 /* ================= 演示数据 ================= */
 const leads = [
   mkLead({
+    id: 15, code: 'JB-XS-2026-0034', title: '关于华南区域促销费用重复核销的导入线索',
+    summary: '通过导入模板录入，反映华南区域部分促销活动存在执行资料缺失、费用重复报销等情况，待进一步核实。',
+    type: '其他调查', sourceUnit: '总部审计部监察', receivedAt: day(0, '10:10'),
+    businessUnit: '酸奶事业部华南区域', ownerUnit: '', transferTo: '李进', creator: '李进',
+    involve: [{ name: '黄某某', personId: 'Y210638', post: '区域费用主管' }],
+    reporterType: '不适用', reporterName: '—', reporterPhone: '—',
+    partnerType: '服务商', partnerName: '广州盛世广告有限公司',
+    attachments: [], sourceData: { importBatch: '2026-11-10 线索导入', importRow: '第2行' },
+    origin: '导入', status: '草稿', createdAt: day(0, '10:10'),
+    investigation: {
+      conclusion: '经对华南区域2026年1-9月促销费用进行核查，发现3笔活动缺少执行照片及验收记录，2笔报销发票存在重复入账情形，涉及金额约28.60万元。\n\n上述问题反映出促销活动过程留痕和费用复核机制执行不到位，建议补充活动执行资料，并对重复报销款项进行追回。',
+      summary: '核查发现3笔活动执行资料缺失、2笔促销费用重复报销，涉及金额约28.60万元，建议补充资料并追回重复报销款。',
+      files: []
+    },
+    logs: [logAt(day(0, '10:10'), '李进', '导入线索', '通过线索导入模板创建，初始状态：草稿')]
+  }),
+  mkLead({
+    id: 16, code: 'JB-XS-2026-0035', title: '关于供应商准入资质有效期异常的导入线索',
+    summary: '通过导入模板录入，反映部分在册供应商资质证书已过有效期但仍在参与报价，准入复审记录不完整。',
+    type: '审计移交线索', sourceUnit: '总部审计部监察', receivedAt: day(0, '09:55'),
+    businessUnit: '供应链事业部', ownerUnit: '', transferTo: '李进', creator: '李进',
+    involve: [{ name: '刘某某', personId: 'Y120447', post: '供应商管理专员' }],
+    reporterType: '不适用', reporterName: '—', reporterPhone: '—',
+    partnerType: '供应商', partnerName: '恒信包装制品有限公司',
+    attachments: [], sourceData: { importBatch: '2026-11-10 线索导入', importRow: '第3行' },
+    origin: '导入', status: '草稿', createdAt: day(0, '09:55'),
+    investigation: {
+      conclusion: '抽查供应链事业部10家在用供应商，发现2家质量体系认证已过期、1家营业执照经营范围与准入品类不一致，且3家供应商均缺少最近一次年度复审记录。\n\n建议暂停问题供应商新增业务，补充资质复审并完善供应商准入台账。',
+      summary: '抽查发现2家供应商资质过期、1家经营范围不符，且3家缺少年度复审记录，建议暂停新增业务并补充复审。',
+      files: []
+    },
+    logs: [logAt(day(0, '09:55'), '李进', '导入线索', '通过线索导入模板创建，初始状态：草稿')]
+  }),
+  mkLead({
+    id: 17, code: 'JB-XS-2026-0036', title: '关于区域仓库租赁价格偏高的导入线索',
+    summary: '通过导入模板录入，反映部分区域仓库租赁单价高于同区域市场水平，租赁决策过程缺少完整比价资料。',
+    type: '业务单位移交线索', sourceUnit: '区域审计部', receivedAt: day(-1, '15:20'),
+    businessUnit: '供应链事业部', ownerUnit: '', transferTo: '李进', creator: '李进',
+    involve: [{ name: '陈某某', personId: 'Y110238', post: '仓储主管' }],
+    reporterType: '不适用', reporterName: '—', reporterPhone: '—',
+    partnerType: '出租方', partnerName: '西南仓储物流有限公司',
+    attachments: [], sourceData: { importBatch: '2026-11-10 线索导入', importRow: '第4行' },
+    origin: '导入', status: '草稿', createdAt: day(-1, '15:20'),
+    investigation: {
+      conclusion: '对比同区域5个仓储租赁项目，发现西南区域2处仓库租赁单价分别高于市场均价18%和22%，租赁审批资料中未见完整比价记录，租赁面积测算依据亦不充分。\n\n建议重新测算租赁需求并补充市场比价，对续租价格开展商务谈判。',
+      summary: '2处仓库租赁单价高于市场均价18%和22%，且缺少完整比价与面积测算依据，建议重新测算并开展续租谈判。',
+      files: []
+    },
+    logs: [logAt(day(-1, '15:20'), '李进', '导入线索', '通过线索导入模板创建，初始状态：草稿')]
+  }),
+  mkLead({
     id: 13, code: 'JB-XS-2026-0032', title: '关于华东区域经销商返利异常的手工录入线索',
     summary: '业务人员反映华东区域部分经销商返利结算口径不一致，相关费用凭证尚未收集完整。',
     type: '其他调查', sourceUnit: '总部审计部监察', receivedAt: day(0, '08:50'),
@@ -861,7 +914,7 @@ const leads = [
     involve: [{ name: '待补充', personId: '—', post: '—' }],
     reporterType: '匿名', reporterName: '—', reporterPhone: '—',
     partnerType: '经销商', partnerName: '待补充', attachments: [],
-    sourceData: {}, origin: '手动', status: '草稿', createdAt: day(0, '08:50'),
+    sourceData: {}, origin: '手动', status: '草稿', pushType: '管理类', createdAt: day(0, '08:50'),
     logs: [logAt(day(0, '08:50'), '李进', '保存草稿', '线索暂存为草稿')]
   }),
   mkLead({
@@ -905,10 +958,10 @@ const leads = [
       { name: '投诉材料.zip', size: 5033165, fromOa: true }
     ],
     sourceData: { oaFlowNo: 'OA-TS-2026-0192', complaintChannel: 'OA转办', complaintCategory: '廉洁从业' },
-    pushType: '舞弊类', origin: 'OA', oaRole: '业务转办', status: '预分析中', createdAt: day(-2, '09:20'), assignedAt: day(-2, '10:05'),
+    pushType: '舞弊类', origin: 'OA', oaRole: '业务转办', status: '草稿', createdAt: day(-2, '09:20'), assignedAt: day(-2, '10:05'),
     logs: [
       logAt(day(-2, '09:20'), '系统', 'OA推送线索', '来源：集团纪检监察组'),
-      logAt(day(-2, '09:20'), '系统', '自动填入预分析分配人员', 'OA转办对象：李进'),
+      logAt(day(-2, '09:20'), '系统', '自动带入承接业务单元', '承接业务单元：总部审计部监察'),
       logAt(day(-2, '10:05'), '杜总', '分配预分析人员', '预分析：李进、王敏；分析：赵磊'),
       logAt(day(0, '09:00'), '系统', '到期提醒', '已向李进、王敏、赵磊发送系统消息')
     ]
@@ -989,14 +1042,14 @@ const leads = [
     id: 5, code: 'OA-XS-2026-0024', title: '关于物流承运商选择未履行比价程序的投诉',
     summary: '投诉反映物流事业部在新增承运商时未履行完整比价程序，部分承运商与业务人员存在关联关系。',
     type: '投诉线索', sourceUnit: 'OA投诉转办', receivedAt: day(-20, '08:50'),
-    businessUnit: '物流事业部', ownerUnit: '', transferTo: '吴婷', creator: '李进',
+    businessUnit: '物流事业部', ownerUnit: '总部审计部监察', transferTo: '', creator: '李进',
     preAssignees: [], analysts: [], deadline: '',
     involve: [{ name: '孙某某', personId: 'Y400126', post: '物流主管' }],
     reporterType: '实名', reporterName: '刘某', reporterPhone: '138****2276',
     partnerType: '承运商', partnerName: '恒通物流有限公司',
     attachments: [{ name: 'OA转办单.pdf', size: 942080, fromOa: true }],
     sourceData: { oaFlowNo: 'OA-TS-2026-0178', complaintChannel: 'OA转办', complaintCategory: '违规经营' },
-    pushType: '管理类', origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-20, '08:50'), decisionAt: day(-20, '08:50'),
+    pushType: '舞弊类', origin: 'OA', oaRole: '职能部门归档', status: '草稿', createdAt: day(-20, '08:50'), decisionAt: day(-20, '08:50'),
     investigation: {
       conclusion: '经调取承运商准入资料、比价记录及合同审批流程，本次新增承运商已履行询价程序，但比价资料归档不完整，未发现利益输送或违规确定承运商的情形。\n\n针对资料归档问题，已提示业务单位补充完整比价过程记录，并将承运商准入资料纳入后续监督检查范围。',
       summary: '调查确认本次承运商选择已履行询价程序，未发现利益输送问题；存在比价资料归档不完整的管理缺陷，已提示补充完善。',
@@ -1005,8 +1058,8 @@ const leads = [
       ]
     },
     logs: [
-      logAt(day(-20, '08:50'), '系统', 'OA归档线索转入', '职能部门线索，仅查阅'),
-      logAt(day(-20, '08:50'), '系统', '设置默认信息', '线索录入人员：李进；转办对象：吴婷')
+      logAt(day(-20, '08:50'), '系统', 'OA归档线索转入', '职能部门线索，初始状态为草稿'),
+      logAt(day(-20, '08:50'), '系统', '设置默认信息', '线索录入人员：李进；承接业务单元：总部审计部监察')
     ]
   }),
   mkLead({
@@ -1038,7 +1091,7 @@ const leads = [
     id: 7, code: 'OA-XS-2026-0020', title: '职能部门转办的关于招标文件设置排他性条款的投诉',
     summary: 'OA归档的职能部门投诉线索，反映某项目招标文件设置明显指向特定品牌的参数条款。',
     type: '投诉线索', sourceUnit: '集团纪检监察组', receivedAt: day(-12, '16:30'),
-    businessUnit: '工程管理部', ownerUnit: '', transferTo: '陈静', creator: '李进',
+    businessUnit: '工程管理部', ownerUnit: '总部审计部监察', transferTo: '', creator: '李进',
     preAssignees: [], analysts: [], deadline: '',
     involve: [{ name: '赵某某', personId: 'Y600193', post: '招标主管' }],
     reporterType: '匿名', reporterName: '—', reporterPhone: '—',
@@ -1048,10 +1101,10 @@ const leads = [
       { name: '招标文件.pdf', size: 6501171, fromOa: true }
     ],
     sourceData: { oaFlowNo: 'OA-TS-2026-0172', complaintChannel: 'OA转办', complaintCategory: '违规经营' },
-    pushType: '管理类', origin: 'OA', oaRole: '职能部门归档', status: '仅查阅', createdAt: day(-12, '16:30'), decisionAt: day(-12, '16:30'),
+    pushType: '舞弊类', origin: 'OA', oaRole: '职能部门归档', status: '草稿', createdAt: day(-12, '16:30'), decisionAt: day(-12, '16:30'),
     logs: [
-      logAt(day(-12, '16:30'), '系统', 'OA归档线索转入', '职能部门线索，仅查阅'),
-      logAt(day(-12, '16:30'), '系统', '设置默认信息', '线索录入人员：李进；转办对象：陈静')
+      logAt(day(-12, '16:30'), '系统', 'OA归档线索转入', '职能部门线索，初始状态为草稿'),
+      logAt(day(-12, '16:30'), '系统', '设置默认信息', '线索录入人员：李进；承接业务单元：总部审计部监察')
     ]
   }),
   mkLead({
@@ -1270,7 +1323,7 @@ const CASE_STATUS_ASSIGNMENTS = {
 transferCases.forEach(c => { c.stage = CASE_STATUS_ASSIGNMENTS[c.id] || '移送外部安全单元'; });
 
 /* ================= 原型数据持久化（跨页面保留） ================= */
-const STORE_KEY = 'jb_inspection_proto_v3';
+const STORE_KEY = 'jb_inspection_proto_v5';
 let restoredFromStore = false;
 
 function persist() {
@@ -1304,10 +1357,23 @@ leads.forEach(l => {
   if (linkedProject) {
     l.projectId = linkedProject.id;
     l.status = linkedProject.status === '已关闭' ? '已结项' : '已立项';
-  } else if (l.origin === 'OA') {
-    l.status = l.oaRole === '职能部门归档' ? '仅查阅' : '已立项';
   } else {
     l.status = '草稿';
+  }
+  if (!['手动', 'OA', '导入'].includes(l.origin)) {
+    const imported = l.sourceData && (l.sourceData.importBatch || l.sourceData.importRow);
+    l.origin = imported ? '导入' : (l.oaRole || String(l.code || '').startsWith('OA-') ? 'OA' : '手动');
+  }
+  if (l.origin === 'OA') {
+    l.pushType = '舞弊类';
+    l.transferTo = '';
+    if (!l.ownerUnit) l.ownerUnit = CURRENT_DEPT;
+  } else {
+    if (!l.pushType) l.pushType = l.origin === '手动' ? '管理类' : '舞弊类';
+    if (l.origin !== '导入' && l.transferTo) {
+      if (!l.ownerUnit) l.ownerUnit = l.transferTo;
+      l.transferTo = '';
+    }
   }
   if (!Array.isArray(l.changes)) l.changes = [];
   if (!BUSINESS_TYPES.includes(l.businessType)) l.businessType = '其它';
@@ -1405,7 +1471,11 @@ const currentLead = () => leads.find(l => l.id === state.selectedId) || null;
 const currentProject = () => projects.find(p => p.id === state.selectedProjectId) || null;
 
 function canEditInfo(l) {
-  return l.status === '草稿' && l.creator === CURRENT_USER;
+  return !!l && ['草稿', '已立项'].includes(l.status);
+}
+
+function canDeleteLead(l) {
+  return !!l && l.status === '草稿' && l.origin !== 'OA';
 }
 
 function deadlineCell(l) {
@@ -1432,7 +1502,8 @@ function peopleText(names) {
 }
 
 function opsFor(l) {
-  const acts = canEditInfo(l) ? [['edit', '编辑'], ['delete', '删除']] : [['view', '查看']];
+  const acts = canEditInfo(l) ? [['edit', '编辑']] : [['view', '查看']];
+  if (canDeleteLead(l)) acts.push(['delete', '删除']);
   return acts.map(([op, label], i) =>
     `<button class="lnk" data-op="${op}" data-id="${l.id}">${label}</button>${i < acts.length - 1 ? '<span class="sep">|</span>' : ''}`
   ).join('');
@@ -1476,6 +1547,34 @@ function renderList() {
   renderPager(all.length);
 }
 
+/* ================= 线索导入 ================= */
+const LEAD_IMPORT_COLUMNS = [
+  { name: '线索类型', width: 110 }, { name: '线索标题', width: 240 },
+  { name: '线索摘要', width: 300 }, { name: '业务类型', width: 90 },
+  { name: '线索接收时间', width: 120 }, { name: '线索所属单位', width: 160 },
+  { name: '线索来源业务单元', width: 180 }, { name: '承接业务单元', width: 160 },
+  { name: '涉及人员姓名', width: 110 }, { name: '涉及人员ID', width: 110 },
+  { name: '涉及人员岗位', width: 120 }, { name: '举报人性质', width: 100 },
+  { name: '举报人姓名', width: 100 }, { name: '举报人联系电话', width: 130 },
+  { name: '合作方性质', width: 100 }, { name: '合作方名称', width: 220 }
+];
+function downloadLeadTemplate() {
+  const headers = LEAD_IMPORT_COLUMNS.map(c => `<th>${esc(c.name)}</th>`).join('');
+  const emptyRows = Array.from({ length: 20 }, () => `<tr>${LEAD_IMPORT_COLUMNS.map(() => '<td></td>').join('')}</tr>`).join('');
+  const cols = LEAD_IMPORT_COLUMNS.map(c => `<col style="width:${c.width}px">`).join('');
+  const html = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>线索导入模板</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>table{border-collapse:collapse;font-family:"Microsoft YaHei",sans-serif;font-size:10.5pt}th{background:#0070c0;color:#fff;font-weight:700;border:1px solid #9bc3e6;padding:7px 9px;text-align:left;white-space:nowrap}td{border:1px solid #b8d5ec;padding:6px 9px;height:24px}</style></head><body><table><colgroup>${cols}</colgroup><thead><tr>${headers}</tr></thead><tbody>${emptyRows}</tbody></table></body></html>`;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '监察线索池_线索导入模板.xls';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('已下载线索导入模板');
+}
+
 function exportLeadsExcel() {
   const list = filteredLeads();
   if (!list.length) { toast('当前查询结果暂无线索'); return; }
@@ -1488,8 +1587,8 @@ function exportLeadsExcel() {
   const rows = list.map(l => `<tr>${[
     l.code, l.type, leadPushType(l) || '—', l.title, l.summary, dateOnly(l.receivedAt),
     leadProjectName(l) || '—', l.businessUnit, l.sourceUnit,
-    leadPushType(l) === '管理类' ? '—' : (l.ownerUnit || '—'),
-    leadPushType(l) === '管理类' ? (l.transferTo || '—') : '—',
+    leadUsesTransfer(l) ? '—' : (l.ownerUnit || '—'),
+    leadUsesTransfer(l) ? (l.transferTo || l.ownerUnit || '—') : '—',
     l.businessType || '其它', l.creator,
     (l.involve || []).map(p => p.name).filter(Boolean).join('、') || '—',
     (l.involve || []).map(p => [p.personId, p.post].filter(Boolean).join(' · ')).filter(Boolean).join('、') || '—',
@@ -1547,8 +1646,10 @@ function clearAuditPanes() {
 }
 
 function investigationFor(l) {
-  if (!l || l.origin !== 'OA' || !['已立项', '已结项', '仅查阅'].includes(l.status)) return null;
-  return l.investigation || null;
+  if (!l || !l.investigation) return null;
+  if (l.origin === '导入') return l.investigation;
+  if (l.origin === 'OA' && ['已立项', '已结项'].includes(l.status)) return l.investigation;
+  return null;
 }
 
 function setInvestigationTabVisible(show) {
@@ -2266,15 +2367,11 @@ function renderLogPane(l) {
 }
 
 /* ================= 进度看板 ================= */
-const BOARD_STATUS_ORDER = ['草稿', '待分配', '预分析', '立项审批中', '已立项', '仅查阅', '不立项'];
+const BOARD_STATUS_ORDER = ['草稿', '已立项', '已结项'];
 const BOARD_STATUS_COLORS = {
   '草稿': '#b9bec6',
-  '待分配': '#e6a23c',
-  '预分析': '#3f75a5',
-  '立项审批中': '#8e78b0',
   '已立项': '#67b346',
-  '仅查阅': '#8798a9',
-  '不立项': '#c7ccd2'
+  '已结项': '#8798a9'
 };
 const BOARD_PIE_COLORS = ['#11538e', '#3f75a5', '#6d9dc5', '#87a9c6', '#67b346', '#e6a23c', '#8e78b0', '#b78168', '#8798a9', '#b8c7d5'];
 
@@ -3449,7 +3546,7 @@ function openLeadUploadModal(target) {
 /* ================= 新增 / 编辑线索 ================= */
 function startLeadEdit(lead) {
   const isNew = !lead;
-  if (!isNew && !canEditInfo(lead)) { toast('仅线索录入人可以编辑线索信息'); return; }
+  if (!isNew && !canEditInfo(lead)) { toast('仅草稿或已立项状态的线索可编辑'); return; }
   closeModal();
   leadEdit = { active: true, leadId: lead ? lead.id : null, isNew, editing: true, built: false };
   leadEditFiles = (lead ? lead.attachments : []).map(f => Object.assign({}, f));
@@ -3478,9 +3575,14 @@ function leadEditFormHtml(lead, isNew) {
   const readAttr = RO ? ' readonly' : '';
   const disabledAttr = RO ? ' disabled' : '';
   const businessTypeValue = BUSINESS_TYPES.includes(d.businessType) ? d.businessType : '其它';
-  const isManagePush = leadPushType(d) === '管理类';
-  const dispatchLabel = isManagePush ? '转办对象' : '承接业务单元';
-  const dispatchValue = isManagePush ? (d.transferTo || '') : (d.ownerUnit || '');
+  const pushTypeValue = leadPushType(d) || '管理类';
+  const usesTransfer = leadUsesTransfer(d);
+  const dispatchLabel = usesTransfer ? '转办对象' : '承接业务单元';
+  const dispatchValue = usesTransfer ? (d.transferTo || d.ownerUnit || '') : (d.ownerUnit || '');
+  const pushTypeEditable = !RO && d.origin !== 'OA';
+  const pushTypeCtl = pushTypeEditable
+    ? `<select class="ctl" id="lfPushType">${['管理类', '舞弊类'].map(o => `<option value="${o}" ${o === pushTypeValue ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+    : `<input class="ctl ro" id="lfPushType" value="${esc(pushTypeValue)}" title="${d.origin === 'OA' ? 'OA推送线索由系统自动带入' : '推送类型'}" readonly>`;
 
   return `<div class="editform">
     <div class="sectmini">基本信息</div>
@@ -3497,8 +3599,8 @@ function leadEditFormHtml(lead, isNew) {
       <div class="frow"><label class="req">线索接收时间</label><div class="fctl"><input class="ctl${readCls}" id="lfReceived" type="date" value="${esc(dateOnly(d.receivedAt))}"${readAttr}></div></div>
       <div class="frow"><label class="req">线索所属单位</label><div class="fctl"><input class="ctl${readCls}" id="lfBusinessUnit" value="${esc(d.businessUnit)}"${readAttr}></div></div>
       <div class="frow"><label class="req">线索来源业务单元</label><div class="fctl"><input class="ctl${readCls}" id="lfSourceUnit" value="${esc(d.sourceUnit)}"${readAttr}></div></div>
-      <div class="frow"><label class="${isManagePush ? '' : 'req'}">${dispatchLabel}</label><div class="fctl"><input class="ctl${readCls}" id="lfOwnerUnit" value="${esc(dispatchValue)}"${readAttr}></div></div>
-      <div class="frow"><label>推送类型</label><div class="fctl"><input class="ctl ro" id="lfPushType" value="${esc(leadPushType(d))}" placeholder="OA推送线索自动带入" title="OA推送线索由系统自动带入" readonly></div></div>
+      <div class="frow"><label id="lfDispatchLabel" class="${usesTransfer ? '' : 'req'}">${dispatchLabel}</label><div class="fctl"><input class="ctl${readCls}" id="lfOwnerUnit" value="${esc(dispatchValue)}"${readAttr}></div></div>
+      <div class="frow"><label class="${pushTypeEditable ? 'req' : ''}">推送类型</label><div class="fctl">${pushTypeCtl}</div></div>
       <div class="frow"><label>线索录入人员</label><div class="fctl"><input class="ctl ro" id="lfCreator" value="${esc(RO ? (d.creator || CURRENT_USER) : CURRENT_USER)}" title="由系统根据登录用户自动填充" readonly></div></div>
     </div>
     <div class="sectmini">举报人</div>
@@ -3677,7 +3779,8 @@ function collectLeadForm(lead) {
     post: (tr.querySelector('[data-if="post"]') || {}).value || ''
   })).map(p => ({ name: p.name.trim(), personId: p.personId.trim(), post: p.post.trim() }))
     .filter(p => p.name || p.personId || p.post);
-  const isManagePushSave = field('lfPushType').value.trim() === '管理类';
+  const pushTypeSave = field('lfPushType').value.trim();
+  const keepTransfer = leadUsesTransfer(lead);
   const dispatchValueSave = field('lfOwnerUnit').value.trim();
   return {
     type: field('lfType').value,
@@ -3686,9 +3789,9 @@ function collectLeadForm(lead) {
     title: field('lfTitle').value.trim(),
     summary: field('lfSummary').value.trim(),
     businessUnit: field('lfBusinessUnit').value.trim(),
-    ownerUnit: isManagePushSave ? '' : dispatchValueSave,
-    transferTo: isManagePushSave ? dispatchValueSave : '',
-    pushType: field('lfPushType').value.trim(),
+    ownerUnit: keepTransfer ? '' : dispatchValueSave,
+    transferTo: keepTransfer ? dispatchValueSave : '',
+    pushType: pushTypeSave,
     businessType: field('lfBusinessType').value,
     creator: CURRENT_USER,
     involve,
@@ -3705,6 +3808,7 @@ function saveLeadForm(lead, isNew) {
   const data = collectLeadForm(lead);
   if (!data.title) { toast('请填写线索标题'); $('#pane-info').querySelector('#lfTitle').focus(); return; }
   if (!data.businessType) { toast('请选择业务类型'); $('#pane-info').querySelector('#lfBusinessType').focus(); return; }
+  if (!data.pushType) { toast('请选择推送类型'); $('#pane-info').querySelector('#lfPushType').focus(); return; }
 
   const now = nowStr();
   if (isNew) {
@@ -3724,11 +3828,10 @@ function saveLeadForm(lead, isNew) {
     selectLead(id);
     toast('草稿已保存');
   } else {
+    const wasDraft = lead.status === '草稿';
     Object.assign(lead, data);
-    lead.status = '草稿';
-    lead.assignedAt = '';
-    lead.logs.push(logAt(now, CURRENT_USER, '保存草稿', '更新草稿信息'));
-    toast('草稿已保存');
+    lead.logs.push(logAt(now, CURRENT_USER, wasDraft ? '保存草稿' : '保存修改', wasDraft ? '更新草稿信息' : '更新线索信息'));
+    toast(wasDraft ? '草稿已保存' : '线索已保存');
     finishLeadEdit();
     renderAll();
     selectLead(lead.id);
@@ -3756,17 +3859,16 @@ function openOaModal() {
   ];
 
   const modeHtml = () => oaMode === '业务转办' ? `
-    <div class="sectmini">预分析分配</div>
+    <div class="sectmini">接收信息</div>
     <div class="info-grid two">
-      ${infoRow('预分析分配人员', '<span class="person">李进</span> <span class="tag blue">OA转办对象自动填入</span>')}
-      ${infoRow('最晚处理日期', `<input class="ctl" id="oaDeadline" type="date" value="${dday(5)}" style="width:170px">`)}
+      ${infoRow('承接业务单元', '总部审计部监察')}
+      ${infoRow('线索状态', plainStatus('草稿'))}
     </div>` : `
     <div class="sectmini">归档信息</div>
     <div class="info-grid two">
       ${infoRow('线索录入人员', '李进')}
       ${infoRow('承接业务单元', '总部审计部监察')}
-      ${infoRow('预分析分配人员', '<span class="muted">—</span>')}
-      ${infoRow('线索状态', plainStatus('仅查阅'))}
+      ${infoRow('线索状态', plainStatus('草稿'))}
     </div>`;
 
   openModal(`
@@ -3777,7 +3879,7 @@ function openOaModal() {
         <div class="info-grid two">
           ${infoRow('OA流程编号', 'OA-TS-2026-0196')}
           ${infoRow('OA发起人', '杜总')}
-          ${infoRow('转办对象', '李进')}
+          ${infoRow('承接业务单元', '总部审计部监察')}
           ${infoRow('转办时间', nowStr())}
         </div>
       </div>
@@ -3830,14 +3932,14 @@ function openOaModal() {
       attachments: oaAttachments.map(f => Object.assign({}, f)),
       sourceData: { oaFlowNo: 'OA-TS-2026-0196', complaintChannel: 'OA转办', complaintCategory: '廉洁从业' },
       origin: 'OA', oaRole: isFunc ? '职能部门归档' : '业务转办',
-      status: isFunc ? '仅查阅' : '预分析', createdAt: now, assignedAt: isFunc ? '' : now,
-      decisionAt: isFunc ? now : '',
+      status: '草稿', createdAt: now, assignedAt: '',
+      decisionAt: '',
       logs: isFunc ? [
-        logAt(now, '系统', 'OA归档线索转入', '职能部门线索，仅查阅'),
+        logAt(now, '系统', 'OA归档线索转入', '职能部门线索，初始状态为草稿'),
         logAt(now, '系统', '设置默认信息', '线索录入人员：李进；承接业务单元：总部审计部监察')
       ] : [
-        logAt(now, '系统', 'OA推送线索', '来源：集团纪检监察组'),
-        logAt(now, '系统', '自动填入预分析分配人员', `OA转办对象：李进；最晚处理日期：${deadline}`)
+        logAt(now, '系统', 'OA推送线索', '来源：集团纪检监察组；初始状态为草稿'),
+        logAt(now, '系统', '设置默认信息', '线索录入人员：李进；承接业务单元：总部审计部监察')
       ]
     });
     leads.unshift(item);
@@ -3848,7 +3950,7 @@ function openOaModal() {
     closeModal();
     renderAll();
     selectLead(id);
-    toast(isFunc ? 'OA归档线索已转入，状态为仅查阅' : 'OA线索已接收，已自动生成预分析待办');
+    toast('OA线索已转入，状态为草稿');
   });
 }
 
@@ -4064,7 +4166,7 @@ function openProjectCloseModal(p) {
 
 /* ================= 操作分发 ================= */
 function openDeleteLeadModal(lead) {
-  if (!lead || !canEditInfo(lead)) { toast('仅草稿状态的线索可删除'); return; }
+  if (!canDeleteLead(lead)) { toast('OA流入的线索不可删除'); return; }
   openModal(`
     ${modalHead('删除线索')}
     <div class="mb">
@@ -4234,6 +4336,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (e.target.closest('#btnNew')) { startLeadEdit(null); return; }
+  if (e.target.closest('#btnImportTpl')) { downloadLeadTemplate(); return; }
   if (e.target.closest('#btnExport')) { exportLeadsExcel(); return; }
   if (e.target.closest('#chgAdd')) { startPeopleChange(currentLead()); return; }
   if (e.target.closest('#chgSave')) { toast('变更记录已暂存（未提交）'); return; }
